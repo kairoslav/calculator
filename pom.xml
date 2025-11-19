@@ -31,6 +31,7 @@
         <grpc.version>1.76.0</grpc.version>
         <protobuf-java.version>4.32.1</protobuf-java.version>
         <spring-grpc.version>0.12.0</spring-grpc.version>
+        <springdoc.version>2.8.14</springdoc.version>
     </properties>
     <dependencies>
         <dependency>
@@ -40,6 +41,11 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>${springdoc.version}</version>
         </dependency>
         <dependency>
             <groupId>io.grpc</groupId>
@@ -113,6 +119,10 @@
                 <version>3.8.0</version>
                 <configuration>
                     <protocVersion>${protobuf-java.version}</protocVersion>
+                    <outputDirectory>${project.build.directory}/generated-sources/grpc</outputDirectory>
+                    <sourceDirectories>
+                        <sourceDirectory>${project.basedir}/src/main/resources/proto</sourceDirectory>
+                    </sourceDirectories>
                     <binaryMavenPlugins>
                         <binaryMavenPlugin>
                             <groupId>io.grpc</groupId>
@@ -128,6 +138,36 @@
                         <goals>
                             <goal>generate</goal>
                         </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.openapitools</groupId>
+                <artifactId>openapi-generator-maven-plugin</artifactId>
+                <version>7.8.0</version>
+                <executions>
+                    <execution>
+                        <id>generate-openapi-server</id>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                        <configuration>
+                            <inputSpec>${project.basedir}/src/main/resources/openapi/calculator-openapi.yaml</inputSpec>
+                            <generatorName>spring</generatorName>
+                            <output>${project.build.directory}/generated-sources/openapi</output>
+                            <apiPackage>ru.itmo.calculator.openapi.api</apiPackage>
+                            <modelPackage>ru.itmo.calculator.openapi.model</modelPackage>
+                            <generateSupportingFiles>false</generateSupportingFiles>
+                            <configOptions>
+                                <library>spring-boot</library>
+                                <useTags>true</useTags>
+                                <interfaceOnly>true</interfaceOnly>
+                                <dateLibrary>java8</dateLibrary>
+                                <useSpringBoot3>true</useSpringBoot3>
+                                <openApiNullable>false</openApiNullable>
+                                <skipDefaultInterface>true</skipDefaultInterface>
+                            </configOptions>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>

@@ -1,0 +1,198 @@
+openapi: 3.0.3
+info:
+  title: Calculator Instruction Execution API
+  version: 1.0.0
+  description: |
+    HTTP interface for submitting calculator instruction lists. The service accepts
+    `calc` and `print` instructions, executes them with dependency-aware scheduling,
+    and returns the values requested by the `print` statements.
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+paths:
+  /api/v1/executions:
+    post:
+      summary: Execute a list of instructions
+      description: |
+        Accepts a strictly ordered list of calculator instructions, executes the
+        dependent arithmetic operations, and returns the values requested by each
+        `print` instruction.
+      operationId: executeProgram
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExecuteProgramRequest'
+            examples:
+              sample1:
+                summary: Two step program
+                value:
+                  instructions:
+                    - type: calc
+                      op: +
+                      var: x
+                      left: 1
+                      right: 2
+                    - type: print
+                      var: x
+              sample2:
+                summary: Program with dependencies
+                value:
+                  instructions:
+                    - type: calc
+                      op: +
+                      var: x
+                      left: 10
+                      right: 2
+                    - type: print
+                      var: x
+                    - type: calc
+                      op: '-'
+                      var: y
+                      left: x
+                      right: 3
+                    - type: calc
+                      op: '*'
+                      var: z
+                      left: x
+                      right: y
+                    - type: print
+                      var: w
+                    - type: calc
+                      op: '*'
+                      var: w
+                      left: z
+                      right: 0
+      responses:
+        '200':
+          description: Successfully executed and collected print results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecuteProgramResponse'
+              examples:
+                sample1:
+                  value:
+                    items:
+                      - var: x
+                        value: 3
+                sample2:
+                  value:
+                    items:
+                      - var: x
+                        value: 12
+                      - var: w
+                        value: 0
+        '400':
+          description: Invalid instruction list (unknown variable, duplicates, etc.)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  schemas:
+    ExecuteProgramRequest:
+      type: object
+      required:
+        - instructions
+      properties:
+        instructions:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/Instruction'
+    Instruction:
+      oneOf:
+        - $ref: '#/components/schemas/CalcInstruction'
+        - $ref: '#/components/schemas/PrintInstruction'
+      discriminator:
+        propertyName: type
+        mapping:
+          calc: '#/components/schemas/CalcInstruction'
+          print: '#/components/schemas/PrintInstruction'
+    CalcInstruction:
+      type: object
+      required:
+        - type
+        - op
+        - var
+        - left
+        - right
+      properties:
+        type:
+          type: string
+          description: Must always be set to `calc`
+          example: calc
+        op:
+          $ref: '#/components/schemas/Operation'
+        var:
+          $ref: '#/components/schemas/VariableName'
+        left:
+          $ref: '#/components/schemas/Operand'
+        right:
+          $ref: '#/components/schemas/Operand'
+    PrintInstruction:
+      type: object
+      required:
+        - type
+        - var
+      properties:
+        type:
+          type: string
+          description: Must always be set to `print`
+          example: print
+        var:
+          $ref: '#/components/schemas/VariableName'
+    Operation:
+      type: string
+      description: Arithmetic operator supported by the service
+      enum: ['+', '-', '*']
+    Operand:
+      description: Literal operand value or reference to an existing variable
+      oneOf:
+        - type: integer
+          format: int64
+        - $ref: '#/components/schemas/VariableName'
+    VariableName:
+      type: string
+      description: Identifier of a variable created by previous `calc` operations
+      pattern: '^[A-Za-z_][A-Za-z0-9_]*$'
+    ExecuteProgramResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          description: Values collected for each `print` instruction
+          items:
+            $ref: '#/components/schemas/PrintedValue'
+    PrintedValue:
+      type: object
+      required:
+        - var
+        - value
+      properties:
+        var:
+          $ref: '#/components/schemas/VariableName'
+        value:
+          type: integer
+          format: int64
+    ErrorResponse:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+        details:
+          type: array
+          items:
+            type: string

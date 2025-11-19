@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+package calculator.api.v1;
+
+option java_multiple_files = true;
+option java_package = "ru.itmo.calculator.grpc";
+option java_outer_classname = "CalculatorProto";
+
+// InstructionExecutor exposes the same capability as the HTTP API but over gRPC.
+service InstructionExecutor {
+  // Execute runs the supplied program and streams back the values requested by print instructions.
+  rpc Execute(ExecuteProgramRequest) returns (ExecuteProgramResponse);
+}
+
+message ExecuteProgramRequest {
+  repeated Instruction instructions = 1;
+}
+
+message Instruction {
+  oneof instruction_kind {
+    CalcInstruction calc = 1;
+    PrintInstruction print = 2;
+  }
+}
+
+message CalcInstruction {
+  Operation op = 1;
+  string var = 2;
+  Operand left = 3;
+  Operand right = 4;
+}
+
+message PrintInstruction {
+  string var = 1;
+}
+
+enum Operation {
+  OPERATION_UNSPECIFIED = 0;
+  OPERATION_ADD = 1;
+  OPERATION_SUBTRACT = 2;
+  OPERATION_MULTIPLY = 3;
+}
+
+message Operand {
+  oneof value {
+    int64 literal = 1;
+    string variable = 2;
+  }
+}
+
+message ExecuteProgramResponse {
+  repeated PrintedValue items = 1;
+}
+
+message PrintedValue {
+  string var = 1;
+  int64 value = 2;
+}
