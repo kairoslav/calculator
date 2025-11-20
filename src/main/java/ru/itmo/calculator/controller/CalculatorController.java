@@ -4,9 +4,7 @@ import java.util.List;
 
 import org.springframework.web.bind.annotation.RestController;
 import ru.itmo.calculator.openapi.api.CalculatorApi;
-import ru.itmo.calculator.openapi.model.ExecuteProgramRequest;
-import ru.itmo.calculator.openapi.model.ExecuteProgramResponse;
-import ru.itmo.calculator.openapi.model.PrintedValue;
+import ru.itmo.calculator.openapi.model.*;
 
 @RestController
 public class CalculatorController implements CalculatorApi {

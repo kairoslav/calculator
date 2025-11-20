@@ -114,6 +114,9 @@ components:
       required:
         - instructions
     Instruction:
+      properties:
+        type:
+          $ref: '#/components/schemas/InstructionType'
       oneOf:
         - $ref: '#/components/schemas/CalcInstruction'
         - $ref: '#/components/schemas/PrintInstruction'
@@ -132,9 +135,7 @@ components:
         - right
       properties:
         type:
-          type: string
-          description: Must always be set to `calc`
-          example: calc
+          $ref: '#/components/schemas/InstructionType'
         op:
           $ref: '#/components/schemas/Operation'
         var:
@@ -152,11 +153,15 @@ components:
         - var
       properties:
         type:
-          type: string
-          description: Must always be set to `print`
-          example: print
+          $ref: '#/components/schemas/InstructionType'
         var:
           $ref: '#/components/schemas/VariableName'
+    InstructionType:
+      type: string
+      description: Instruction type
+      enum:
+        - calc
+        - print
     Operation:
       type: string
       description: Arithmetic operator supported by the service
