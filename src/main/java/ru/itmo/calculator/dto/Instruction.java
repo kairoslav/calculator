@@ -1,4 +1,4 @@
-package ru.itmo.calculator.execution;
+package ru.itmo.calculator.dto;
 
 /**
  * Marker interface for supported instructions.

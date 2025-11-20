@@ -1,4 +1,4 @@
-package ru.itmo.calculator.execution;
+package ru.itmo.calculator.dto;
 
 /**
  * Instruction that computes a value and stores it into a variable.

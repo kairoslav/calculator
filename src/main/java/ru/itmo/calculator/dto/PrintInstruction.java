@@ -1,4 +1,4 @@
-package ru.itmo.calculator.execution;
+package ru.itmo.calculator.dto;
 
 /**
  * Instruction that requests printing a variable value.

@@ -1,4 +1,4 @@
-package ru.itmo.calculator.execution;
+package ru.itmo.calculator.dto;
 
 /**
  * Result of a print instruction.

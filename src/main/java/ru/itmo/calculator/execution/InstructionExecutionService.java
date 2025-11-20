@@ -16,6 +16,14 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import org.springframework.stereotype.Service;
+import ru.itmo.calculator.dto.ArithmeticOp;
+import ru.itmo.calculator.dto.CalcInstruction;
+import ru.itmo.calculator.dto.Instruction;
+import ru.itmo.calculator.dto.LiteralOperand;
+import ru.itmo.calculator.dto.Operand;
+import ru.itmo.calculator.dto.PrintInstruction;
+import ru.itmo.calculator.dto.PrintResult;
+import ru.itmo.calculator.dto.VariableOperand;
 
 /**
  * Executes calculator instructions with dependency resolution and parallelism.
