@@ -52,11 +52,11 @@ class CalculatorControllerTest {
                 }
                 """;
 
-        List<InstructionDto> domainInstructions =
+        List<Instruction> domainInstructions =
                 List.of(
-                        new CalcInstructionDto("x", ArithmeticOpDto.ADD, new LiteralOperandDto(1), new LiteralOperandDto(2)),
-                        new PrintInstructionDto("x"));
-        List<PrintResultDto> executionResults = List.of(new PrintResultDto("x", 3));
+                        new CalcInstruction("x", ArithmeticOp.ADD, new LiteralOperand(1), new LiteralOperand(2)),
+                        new PrintInstruction("x"));
+        List<PrintResult> executionResults = List.of(new PrintResult("x", 3));
         List<PrintedValue> responseItems = List.of(new PrintedValue().var("x").value(3L));
 
         when(converter.toDomainInstructions(any(ExecuteProgramRequest.class))).thenReturn(domainInstructions);
@@ -76,7 +76,7 @@ class CalculatorControllerTest {
         ru.itmo.calculator.openapi.model.CalcInstructionDto calc =
                 (ru.itmo.calculator.openapi.model.CalcInstructionDto) parsedRequest.getInstructions().getFirst();
         assertEquals(Operation.PLUS, calc.getOp());
-        assertTrue(calc.getLeft() instanceof LiteralOperandValueDto);
+        assertTrue(calc.getLeft() instanceof LiteralOperandValue);
         assertTrue(parsedRequest.getInstructions().get(1)
                 instanceof ru.itmo.calculator.openapi.model.PrintInstructionDto);
     }

@@ -17,25 +17,23 @@ import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import ru.itmo.calculator.dto.ArithmeticOpDto;
-import ru.itmo.calculator.dto.CalcInstructionDto;
-import ru.itmo.calculator.dto.InstructionDto;
-import ru.itmo.calculator.dto.LiteralOperandDto;
-import ru.itmo.calculator.dto.PrintInstructionDto;
-import ru.itmo.calculator.dto.PrintResultDto;
+import ru.itmo.calculator.dto.ArithmeticOp;
+import ru.itmo.calculator.dto.CalcInstruction;
+import ru.itmo.calculator.dto.Instruction;
+import ru.itmo.calculator.dto.LiteralOperand;
+import ru.itmo.calculator.dto.PrintInstruction;
+import ru.itmo.calculator.dto.PrintResult;
 import ru.itmo.calculator.execution.InstructionExecutionService;
 import ru.itmo.calculator.generated.grpc.ExecuteProgramRequest;
 import ru.itmo.calculator.generated.grpc.ExecuteProgramResponse;
 import ru.itmo.calculator.generated.grpc.Operation;
-import ru.itmo.calculator.grpc.GrpcInstructionConverter;
-import ru.itmo.calculator.grpc.InstructionExecutorService;
 
 class InstructionExecutorServiceTest {
 
     @Test
     void executesProgramUsingExecutionService() {
         InstructionExecutionService executionService = mock(InstructionExecutionService.class);
-        when(executionService.execute(anyList())).thenReturn(List.of(new PrintResultDto("x", 3)));
+        when(executionService.execute(anyList())).thenReturn(List.of(new PrintResult("x", 3)));
 
         InstructionExecutorService service =
                 new InstructionExecutorService(executionService, new GrpcInstructionConverter());
@@ -43,18 +41,18 @@ class InstructionExecutorServiceTest {
 
         service.execute(buildRequest(), observer);
 
-        ArgumentCaptor<List<InstructionDto>> captor = ArgumentCaptor.forClass(List.class);
+        ArgumentCaptor<List<Instruction>> captor = ArgumentCaptor.forClass(List.class);
         verify(executionService).execute(captor.capture());
-        List<InstructionDto> domainInstructions = captor.getValue();
+        List<Instruction> domainInstructions = captor.getValue();
         assertEquals(2, domainInstructions.size());
 
-        CalcInstructionDto calc = (CalcInstructionDto) domainInstructions.get(0);
+        CalcInstruction calc = (CalcInstruction) domainInstructions.get(0);
         assertEquals("x", calc.var());
-        assertEquals(ArithmeticOpDto.ADD, calc.op());
-        assertEquals(new LiteralOperandDto(1), calc.left());
-        assertEquals(new LiteralOperandDto(2), calc.right());
+        assertEquals(ArithmeticOp.ADD, calc.op());
+        assertEquals(new LiteralOperand(1), calc.left());
+        assertEquals(new LiteralOperand(2), calc.right());
 
-        PrintInstructionDto print = (PrintInstructionDto) domainInstructions.get(1);
+        PrintInstruction print = (PrintInstruction) domainInstructions.get(1);
         assertEquals("x", print.var());
 
         assertTrue(observer.completed);

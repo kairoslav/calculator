@@ -2,55 +2,55 @@ package ru.itmo.calculator.converter;
 
 import java.util.List;
 import org.springframework.stereotype.Component;
-import ru.itmo.calculator.dto.ArithmeticOpDto;
-import ru.itmo.calculator.dto.CalcInstructionDto;
-import ru.itmo.calculator.dto.InstructionDto;
-import ru.itmo.calculator.dto.LiteralOperandDto;
-import ru.itmo.calculator.dto.OperandDto;
-import ru.itmo.calculator.dto.PrintInstructionDto;
-import ru.itmo.calculator.dto.PrintResultDto;
-import ru.itmo.calculator.dto.VariableOperandDto;
+import ru.itmo.calculator.dto.ArithmeticOp;
+import ru.itmo.calculator.dto.CalcInstruction;
+import ru.itmo.calculator.dto.Instruction;
+import ru.itmo.calculator.dto.LiteralOperand;
+import ru.itmo.calculator.dto.Operand;
+import ru.itmo.calculator.dto.PrintInstruction;
+import ru.itmo.calculator.dto.PrintResult;
+import ru.itmo.calculator.dto.VariableOperand;
 import ru.itmo.calculator.openapi.model.ExecuteProgramRequest;
-import ru.itmo.calculator.dto.LiteralOperandValueDto;
+import ru.itmo.calculator.dto.LiteralOperandValue;
 import ru.itmo.calculator.openapi.model.PrintedValue;
-import ru.itmo.calculator.dto.VariableOperandValueDto;
+import ru.itmo.calculator.dto.VariableOperandValue;
 
 @Component
 public class CalculatorApiConverter {
 
-    public List<InstructionDto> toDomainInstructions(ExecuteProgramRequest request) {
+    public List<Instruction> toDomainInstructions(ExecuteProgramRequest request) {
         return request.getInstructions().stream().map(this::toDomainInstruction).toList();
     }
 
-    public List<PrintedValue> toPrintedValues(List<PrintResultDto> results) {
+    public List<PrintedValue> toPrintedValues(List<PrintResult> results) {
         return results.stream().map(this::toPrintedValue).toList();
     }
 
-    private InstructionDto toDomainInstruction(ru.itmo.calculator.openapi.model.InstructionDto instruction) {
+    private Instruction toDomainInstruction(ru.itmo.calculator.openapi.model.InstructionDto instruction) {
         if (instruction instanceof ru.itmo.calculator.openapi.model.CalcInstructionDto calc) {
-            return new CalcInstructionDto(
+            return new CalcInstruction(
                     calc.getVar(),
-                    ArithmeticOpDto.fromSymbol(calc.getOp().getValue()),
+                    ArithmeticOp.fromSymbol(calc.getOp().getValue()),
                     toOperand(calc.getLeft()),
                     toOperand(calc.getRight()));
         }
         if (instruction instanceof ru.itmo.calculator.openapi.model.PrintInstructionDto print) {
-            return new PrintInstructionDto(print.getVar());
+            return new PrintInstruction(print.getVar());
         }
         throw new IllegalArgumentException("Unsupported instruction: " + instruction);
     }
 
-    private OperandDto toOperand(ru.itmo.calculator.openapi.model.OperandDto rawValue) {
-        if (rawValue instanceof LiteralOperandValueDto literal) {
-            return new LiteralOperandDto(literal.getValue());
+    private Operand toOperand(ru.itmo.calculator.openapi.model.OperandDto rawValue) {
+        if (rawValue instanceof LiteralOperandValue literal) {
+            return new LiteralOperand(literal.getValue());
         }
-        if (rawValue instanceof VariableOperandValueDto variable) {
-            return new VariableOperandDto(variable.getName());
+        if (rawValue instanceof VariableOperandValue variable) {
+            return new VariableOperand(variable.getName());
         }
         throw new IllegalArgumentException("Unsupported operand: " + rawValue);
     }
 
-    private PrintedValue toPrintedValue(PrintResultDto result) {
+    private PrintedValue toPrintedValue(PrintResult result) {
         return new PrintedValue().var(result.var()).value(result.value());
     }
 }

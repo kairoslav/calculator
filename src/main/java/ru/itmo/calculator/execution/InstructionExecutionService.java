@@ -16,14 +16,14 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import org.springframework.stereotype.Service;
-import ru.itmo.calculator.dto.ArithmeticOpDto;
-import ru.itmo.calculator.dto.CalcInstructionDto;
-import ru.itmo.calculator.dto.InstructionDto;
-import ru.itmo.calculator.dto.LiteralOperandDto;
-import ru.itmo.calculator.dto.OperandDto;
-import ru.itmo.calculator.dto.PrintInstructionDto;
-import ru.itmo.calculator.dto.PrintResultDto;
-import ru.itmo.calculator.dto.VariableOperandDto;
+import ru.itmo.calculator.dto.ArithmeticOp;
+import ru.itmo.calculator.dto.CalcInstruction;
+import ru.itmo.calculator.dto.Instruction;
+import ru.itmo.calculator.dto.LiteralOperand;
+import ru.itmo.calculator.dto.Operand;
+import ru.itmo.calculator.dto.PrintInstruction;
+import ru.itmo.calculator.dto.PrintResult;
+import ru.itmo.calculator.dto.VariableOperand;
 
 /**
  * Executes calculator instructions with dependency resolution and parallelism.
@@ -44,18 +44,18 @@ public class InstructionExecutionService {
         this.operationListener = operationListener == null ? var -> {} : operationListener;
     }
 
-    public List<PrintResultDto> execute(List<InstructionDto> instructions) {
+    public List<PrintResult> execute(List<Instruction> instructions) {
         Objects.requireNonNull(instructions, "instructions");
-        Map<String, CalcInstructionDto> calculations = new HashMap<>();
-        List<PrintInstructionDto> printInstructions = new ArrayList<>();
+        Map<String, CalcInstruction> calculations = new HashMap<>();
+        List<PrintInstruction> printInstructions = new ArrayList<>();
 
-        for (InstructionDto instruction : instructions) {
-            if (instruction instanceof CalcInstructionDto calc) {
+        for (Instruction instruction : instructions) {
+            if (instruction instanceof CalcInstruction calc) {
                 if (calculations.containsKey(calc.var())) {
                     throw new IllegalArgumentException("Variable is already defined: " + calc.var());
                 }
                 calculations.put(calc.var(), calc);
-            } else if (instruction instanceof PrintInstructionDto print) {
+            } else if (instruction instanceof PrintInstruction print) {
                 printInstructions.add(print);
             } else {
                 throw new IllegalArgumentException("Unsupported instruction: " + instruction);
@@ -70,20 +70,20 @@ public class InstructionExecutionService {
         detectCycles(requiredVariables, calculations);
 
         Map<String, CompletableFuture<Long>> cache = new ConcurrentHashMap<>();
-        List<PrintResultDto> results = new ArrayList<>();
+        List<PrintResult> results = new ArrayList<>();
 
-        for (PrintInstructionDto print : printInstructions) {
+        for (PrintInstruction print : printInstructions) {
             CompletableFuture<Long> future = resolveVariable(print.var(), requiredVariables, calculations, cache);
-            results.add(new PrintResultDto(print.var(), future.join()));
+            results.add(new PrintResult(print.var(), future.join()));
         }
 
         return results;
     }
 
     private Set<String> collectRequiredVariables(
-            List<PrintInstructionDto> printInstructions, Map<String, CalcInstructionDto> calculations) {
+            List<PrintInstruction> printInstructions, Map<String, CalcInstruction> calculations) {
         Set<String> required = new LinkedHashSet<>();
-        for (PrintInstructionDto print : printInstructions) {
+        for (PrintInstruction print : printInstructions) {
             collectForVariable(print.var(), required, calculations, new HashSet<>());
         }
         return required;
@@ -92,12 +92,12 @@ public class InstructionExecutionService {
     private void collectForVariable(
             String var,
             Set<String> required,
-            Map<String, CalcInstructionDto> calculations,
+            Map<String, CalcInstruction> calculations,
             Set<String> visiting) {
         if (required.contains(var)) {
             return;
         }
-        CalcInstructionDto instruction = calculations.get(var);
+        CalcInstruction instruction = calculations.get(var);
         if (instruction == null) {
             throw new IllegalArgumentException("Variable is never calculated: " + var);
         }
@@ -112,7 +112,7 @@ public class InstructionExecutionService {
         required.add(var);
     }
 
-    private void detectCycles(Set<String> requiredVariables, Map<String, CalcInstructionDto> calculations) {
+    private void detectCycles(Set<String> requiredVariables, Map<String, CalcInstruction> calculations) {
         Map<String, VisitState> states = new HashMap<>();
         for (String var : requiredVariables) {
             if (states.get(var) == null) {
@@ -123,11 +123,11 @@ public class InstructionExecutionService {
 
     private void dfs(
             String var,
-            Map<String, CalcInstructionDto> calculations,
+            Map<String, CalcInstruction> calculations,
             Set<String> requiredVariables,
             Map<String, VisitState> states) {
         states.put(var, VisitState.IN_PROGRESS);
-        CalcInstructionDto instruction = calculations.get(var);
+        CalcInstruction instruction = calculations.get(var);
         if (instruction == null) {
             return;
         }
@@ -147,26 +147,26 @@ public class InstructionExecutionService {
         states.put(var, VisitState.DONE);
     }
 
-    private List<String> variableDependencies(CalcInstructionDto instruction) {
+    private List<String> variableDependencies(CalcInstruction instruction) {
         List<String> deps = new ArrayList<>();
-        if (instruction.left() instanceof VariableOperandDto(String name)) {
+        if (instruction.left() instanceof VariableOperand(String name)) {
             deps.add(name);
         }
-        if (instruction.right() instanceof VariableOperandDto(String name)) {
+        if (instruction.right() instanceof VariableOperand(String name)) {
             deps.add(name);
         }
         return deps;
     }
 
     private CompletableFuture<Long> resolveOperand(
-            OperandDto operand,
+            Operand operand,
             Set<String> requiredVariables,
-            Map<String, CalcInstructionDto> calculations,
+            Map<String, CalcInstruction> calculations,
             Map<String, CompletableFuture<Long>> cache) {
-        if (operand instanceof LiteralOperandDto literal) {
+        if (operand instanceof LiteralOperand literal) {
             return CompletableFuture.completedFuture(literal.value());
         }
-        if (operand instanceof VariableOperandDto variable) {
+        if (operand instanceof VariableOperand variable) {
             return resolveVariable(variable.name(), requiredVariables, calculations, cache);
         }
         throw new IllegalArgumentException("Unknown operand: " + operand);
@@ -175,7 +175,7 @@ public class InstructionExecutionService {
     private CompletableFuture<Long> resolveVariable(
             String var,
             Set<String> requiredVariables,
-            Map<String, CalcInstructionDto> calculations,
+            Map<String, CalcInstruction> calculations,
             Map<String, CompletableFuture<Long>> cache) {
         if (!requiredVariables.contains(var)) {
             throw new IllegalArgumentException("Variable is not required: " + var);
@@ -183,7 +183,7 @@ public class InstructionExecutionService {
         return cache.computeIfAbsent(
                 var,
                 name -> {
-                    CalcInstructionDto instruction = calculations.get(name);
+                    CalcInstruction instruction = calculations.get(name);
                     if (instruction == null) {
                         throw new IllegalArgumentException("Variable is never calculated: " + name);
                     }
@@ -202,7 +202,7 @@ public class InstructionExecutionService {
                 });
     }
 
-    private long applyOperation(ArithmeticOpDto op, long left, long right) {
+    private long applyOperation(ArithmeticOp op, long left, long right) {
         return switch (op) {
             case ADD -> left + right;
             case SUBTRACT -> left - right;

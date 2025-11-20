@@ -5,10 +5,10 @@ import java.util.Objects;
 /**
  * Wrapper for literal values in OpenAPI requests.
  */
-public final class LiteralOperandValueDto implements OperandDto {
+public final class LiteralOperandValue implements Operand {
     private final long value;
 
-    public LiteralOperandValueDto(long value) {
+    public LiteralOperandValue(long value) {
         this.value = value;
     }
 
@@ -21,7 +21,7 @@ public final class LiteralOperandValueDto implements OperandDto {
         if (this == o) {
             return true;
         }
-        if (!(o instanceof LiteralOperandValueDto that)) {
+        if (!(o instanceof LiteralOperandValue that)) {
             return false;
         }
         return value == that.value;

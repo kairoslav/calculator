@@ -5,10 +5,10 @@ import java.util.Objects;
 /**
  * Wrapper for variable references in OpenAPI requests.
  */
-public final class VariableOperandValueDto implements OperandDto {
+public final class VariableOperandValue implements Operand {
     private final String name;
 
-    public VariableOperandValueDto(String name) {
+    public VariableOperandValue(String name) {
         this.name = name;
     }
 
@@ -21,7 +21,7 @@ public final class VariableOperandValueDto implements OperandDto {
         if (this == o) {
             return true;
         }
-        if (!(o instanceof VariableOperandValueDto that)) {
+        if (!(o instanceof VariableOperandValue that)) {
             return false;
         }
         return Objects.equals(name, that.name);
