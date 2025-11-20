@@ -141,11 +141,9 @@ components:
         var:
           $ref: '#/components/schemas/VariableName'
         left:
-          type: integer
-          format: int64
+          $ref: '#/components/schemas/Operand'
         right:
-          type: integer
-          format: int64
+          $ref: '#/components/schemas/Operand'
     PrintInstruction:
       type: object
       required:
@@ -166,6 +164,12 @@ components:
       type: string
       description: Arithmetic operator supported by the service
       enum: ['+', '-', '*']
+    Operand:
+      description: Either a literal value or a reference to another variable
+      oneOf:
+        - type: integer
+          format: int64
+        - $ref: '#/components/schemas/VariableName'
     VariableName:
       type: string
       description: Identifier of a variable created by previous `calc` operations

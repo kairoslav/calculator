@@ -15,10 +15,12 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import org.springframework.stereotype.Service;
 
 /**
  * Executes calculator instructions with dependency resolution and parallelism.
  */
+@Service
 public class InstructionExecutionService {
     private final Executor executor;
     private final Duration operationDelay;
