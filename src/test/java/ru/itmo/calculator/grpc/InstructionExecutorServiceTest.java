@@ -24,6 +24,11 @@ import ru.itmo.calculator.dto.LiteralOperand;
 import ru.itmo.calculator.dto.PrintInstruction;
 import ru.itmo.calculator.dto.PrintResult;
 import ru.itmo.calculator.execution.InstructionExecutionService;
+import ru.itmo.calculator.generated.grpc.ExecuteProgramRequest;
+import ru.itmo.calculator.generated.grpc.ExecuteProgramResponse;
+import ru.itmo.calculator.generated.grpc.Operation;
+import ru.itmo.calculator.grpc.GrpcInstructionConverter;
+import ru.itmo.calculator.grpc.InstructionExecutorService;
 
 class InstructionExecutorServiceTest {
 
@@ -84,18 +89,18 @@ class InstructionExecutorServiceTest {
     private ExecuteProgramRequest buildRequest() {
         return ExecuteProgramRequest.newBuilder()
                 .addInstructions(
-                        ru.itmo.calculator.grpc.Instruction.newBuilder()
+                        ru.itmo.calculator.generated.grpc.Instruction.newBuilder()
                                 .setCalc(
-                                        ru.itmo.calculator.grpc.CalcInstruction.newBuilder()
+                                        ru.itmo.calculator.generated.grpc.CalcInstruction.newBuilder()
                                                 .setVar("x")
                                                 .setOp(Operation.OPERATION_ADD)
-                                                .setLeft(ru.itmo.calculator.grpc.Operand.newBuilder().setLiteral(1).build())
-                                                .setRight(ru.itmo.calculator.grpc.Operand.newBuilder().setLiteral(2).build())
+                                                .setLeft(ru.itmo.calculator.generated.grpc.Operand.newBuilder().setLiteral(1).build())
+                                                .setRight(ru.itmo.calculator.generated.grpc.Operand.newBuilder().setLiteral(2).build())
                                                 .build())
                                 .build())
                 .addInstructions(
-                        ru.itmo.calculator.grpc.Instruction.newBuilder()
-                                .setPrint(ru.itmo.calculator.grpc.PrintInstruction.newBuilder().setVar("x").build())
+                        ru.itmo.calculator.generated.grpc.Instruction.newBuilder()
+                                .setPrint(ru.itmo.calculator.generated.grpc.PrintInstruction.newBuilder().setVar("x").build())
                                 .build())
                 .build();
     }

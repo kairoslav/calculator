@@ -28,6 +28,7 @@
     </scm>
     <properties>
         <java.version>25</java.version>
+        <maven.compiler.release>25</maven.compiler.release>
         <grpc.version>1.76.0</grpc.version>
         <protobuf-java.version>4.32.1</protobuf-java.version>
         <spring-grpc.version>0.12.0</spring-grpc.version>
@@ -109,6 +110,34 @@
                         </path>
                     </annotationProcessorPaths>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>0.8.14</version>
+                <configuration>
+                    <includes>
+                        <include>ru/itmo/calculator/**</include>
+                    </includes>
+                    <excludes>
+                        <exclude>**/*MockitoMock*</exclude>
+                        <exclude>**/*$auxiliary$*</exclude>
+                    </excludes>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>io.github.ascopes</groupId>

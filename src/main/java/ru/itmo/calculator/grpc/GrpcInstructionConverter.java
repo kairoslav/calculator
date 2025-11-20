@@ -11,6 +11,10 @@ import ru.itmo.calculator.dto.Operand;
 import ru.itmo.calculator.dto.PrintInstruction;
 import ru.itmo.calculator.dto.PrintResult;
 import ru.itmo.calculator.dto.VariableOperand;
+import ru.itmo.calculator.generated.grpc.ExecuteProgramRequest;
+import ru.itmo.calculator.generated.grpc.ExecuteProgramResponse;
+import ru.itmo.calculator.generated.grpc.Operation;
+import ru.itmo.calculator.generated.grpc.PrintedValue;
 
 @Component
 public class GrpcInstructionConverter {
@@ -34,7 +38,7 @@ public class GrpcInstructionConverter {
         return builder.build();
     }
 
-    private Instruction toDomainInstruction(ru.itmo.calculator.grpc.Instruction instruction) {
+    private Instruction toDomainInstruction(ru.itmo.calculator.generated.grpc.Instruction instruction) {
         return switch (instruction.getInstructionKindCase()) {
             case CALC -> toCalcInstruction(instruction.getCalc());
             case PRINT -> new PrintInstruction(instruction.getPrint().getVar());
@@ -42,12 +46,12 @@ public class GrpcInstructionConverter {
         };
     }
 
-    private CalcInstruction toCalcInstruction(ru.itmo.calculator.grpc.CalcInstruction calc) {
+    private CalcInstruction toCalcInstruction(ru.itmo.calculator.generated.grpc.CalcInstruction calc) {
         return new CalcInstruction(
                 calc.getVar(), toArithmeticOp(calc.getOp()), toOperand(calc.getLeft()), toOperand(calc.getRight()));
     }
 
-    private Operand toOperand(ru.itmo.calculator.grpc.Operand operand) {
+    private Operand toOperand(ru.itmo.calculator.generated.grpc.Operand operand) {
         return switch (operand.getValueCase()) {
             case LITERAL -> new LiteralOperand(operand.getLiteral());
             case VARIABLE -> new VariableOperand(operand.getVariable());

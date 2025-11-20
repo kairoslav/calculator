@@ -7,6 +7,9 @@ import org.springframework.grpc.server.service.GrpcService;
 import ru.itmo.calculator.dto.Instruction;
 import ru.itmo.calculator.dto.PrintResult;
 import ru.itmo.calculator.execution.InstructionExecutionService;
+import ru.itmo.calculator.generated.grpc.ExecuteProgramRequest;
+import ru.itmo.calculator.generated.grpc.ExecuteProgramResponse;
+import ru.itmo.calculator.generated.grpc.InstructionExecutorGrpc;
 
 @GrpcService
 public class InstructionExecutorService extends InstructionExecutorGrpc.InstructionExecutorImplBase {

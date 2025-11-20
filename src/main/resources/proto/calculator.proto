@@ -3,12 +3,11 @@ syntax = "proto3";
 package calculator.api.v1;
 
 option java_multiple_files = true;
-option java_package = "ru.itmo.calculator.grpc";
+option java_package = "ru.itmo.calculator.generated.grpc";
 option java_outer_classname = "CalculatorProto";
 
 // InstructionExecutor exposes the same capability as the HTTP API but over gRPC.
 service InstructionExecutor {
-  // Execute runs the supplied program and streams back the values requested by print instructions.
   rpc Execute(ExecuteProgramRequest) returns (ExecuteProgramResponse);
 }
 
