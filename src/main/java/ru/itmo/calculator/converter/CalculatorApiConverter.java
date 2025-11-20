@@ -10,19 +10,19 @@ import ru.itmo.calculator.dto.Operand;
 import ru.itmo.calculator.dto.PrintInstruction;
 import ru.itmo.calculator.dto.PrintResult;
 import ru.itmo.calculator.dto.VariableOperand;
-import ru.itmo.calculator.openapi.model.ExecuteProgramRequest;
+import ru.itmo.calculator.openapi.model.ExecuteProgramRequestDto;
 import ru.itmo.calculator.dto.LiteralOperandValue;
-import ru.itmo.calculator.openapi.model.PrintedValue;
+import ru.itmo.calculator.openapi.model.PrintedValueDto;
 import ru.itmo.calculator.dto.VariableOperandValue;
 
 @Component
 public class CalculatorApiConverter {
 
-    public List<Instruction> toDomainInstructions(ExecuteProgramRequest request) {
+    public List<Instruction> toDomainInstructions(ExecuteProgramRequestDto request) {
         return request.getInstructions().stream().map(this::toDomainInstruction).toList();
     }
 
-    public List<PrintedValue> toPrintedValues(List<PrintResult> results) {
+    public List<PrintedValueDto> toPrintedValues(List<PrintResult> results) {
         return results.stream().map(this::toPrintedValue).toList();
     }
 
@@ -50,7 +50,7 @@ public class CalculatorApiConverter {
         throw new IllegalArgumentException("Unsupported operand: " + rawValue);
     }
 
-    private PrintedValue toPrintedValue(PrintResult result) {
-        return new PrintedValue().var(result.var()).value(result.value());
+    private PrintedValueDto toPrintedValue(PrintResult result) {
+        return new PrintedValueDto().var(result.var()).value(result.value());
     }
 }

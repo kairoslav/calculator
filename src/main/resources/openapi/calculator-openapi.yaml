@@ -28,7 +28,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ExecuteProgramRequest'
+              $ref: '#/components/schemas/ExecuteProgramRequestDto'
             examples:
               sample1:
                 summary: Two step program
@@ -75,7 +75,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ExecuteProgramResponse'
+                $ref: '#/components/schemas/ExecuteProgramResponseDto'
               examples:
                 sample1:
                   value:
@@ -94,16 +94,16 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/ErrorResponseDto'
         '500':
           description: Unexpected server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/ErrorResponseDto'
 components:
   schemas:
-    ExecuteProgramRequest:
+    ExecuteProgramRequestDto:
       type: object
       properties:
         instructions:
@@ -116,7 +116,7 @@ components:
     InstructionDto:
       properties:
         type:
-          $ref: '#/components/schemas/InstructionType'
+          $ref: '#/components/schemas/InstructionTypeDto'
       oneOf:
         - $ref: '#/components/schemas/CalcInstructionDto'
         - $ref: '#/components/schemas/PrintInstructionDto'
@@ -135,11 +135,11 @@ components:
         - right
       properties:
         type:
-          $ref: '#/components/schemas/InstructionType'
+          $ref: '#/components/schemas/InstructionTypeDto'
         op:
-          $ref: '#/components/schemas/Operation'
+          $ref: '#/components/schemas/OperationDto'
         var:
-          $ref: '#/components/schemas/VariableName'
+          $ref: '#/components/schemas/VariableNameDto'
         left:
           $ref: '#/components/schemas/OperandDto'
         right:
@@ -151,16 +151,16 @@ components:
         - var
       properties:
         type:
-          $ref: '#/components/schemas/InstructionType'
+          $ref: '#/components/schemas/InstructionTypeDto'
         var:
-          $ref: '#/components/schemas/VariableName'
-    InstructionType:
+          $ref: '#/components/schemas/VariableNameDto'
+    InstructionTypeDto:
       type: string
       description: InstructionDto type
       enum:
         - calc
         - print
-    Operation:
+    OperationDto:
       type: string
       description: Arithmetic operator supported by the service
       enum: ['+', '-', '*']
@@ -169,12 +169,12 @@ components:
       oneOf:
         - type: integer
           format: int64
-        - $ref: '#/components/schemas/VariableName'
-    VariableName:
+        - $ref: '#/components/schemas/VariableNameDto'
+    VariableNameDto:
       type: string
       description: Identifier of a variable created by previous `calc` operations
       pattern: '^[A-Za-z_][A-Za-z0-9_]*$'
-    ExecuteProgramResponse:
+    ExecuteProgramResponseDto:
       type: object
       required:
         - items
@@ -183,19 +183,19 @@ components:
           type: array
           description: Values collected for each `print` instruction
           items:
-            $ref: '#/components/schemas/PrintedValue'
-    PrintedValue:
+            $ref: '#/components/schemas/PrintedValueDto'
+    PrintedValueDto:
       type: object
       required:
         - var
         - value
       properties:
         var:
-          $ref: '#/components/schemas/VariableName'
+          $ref: '#/components/schemas/VariableNameDto'
         value:
           type: integer
           format: int64
-    ErrorResponse:
+    ErrorResponseDto:
       type: object
       required:
         - message

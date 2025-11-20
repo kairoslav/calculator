@@ -23,9 +23,9 @@ import ru.itmo.calculator.config.JacksonConfig;
 import ru.itmo.calculator.converter.CalculatorApiConverter;
 import ru.itmo.calculator.dto.*;
 import ru.itmo.calculator.execution.InstructionExecutionService;
-import ru.itmo.calculator.openapi.model.ExecuteProgramRequest;
-import ru.itmo.calculator.openapi.model.Operation;
-import ru.itmo.calculator.openapi.model.PrintedValue;
+import ru.itmo.calculator.openapi.model.ExecuteProgramRequestDto;
+import ru.itmo.calculator.openapi.model.OperationDto;
+import ru.itmo.calculator.openapi.model.PrintedValueDto;
 
 @WebMvcTest(controllers = CalculatorController.class)
 @Import({JacksonConfig.class, GlobalExceptionHandler.class})
@@ -57,9 +57,9 @@ class CalculatorControllerTest {
                         new CalcInstruction("x", ArithmeticOp.ADD, new LiteralOperand(1), new LiteralOperand(2)),
                         new PrintInstruction("x"));
         List<PrintResult> executionResults = List.of(new PrintResult("x", 3));
-        List<PrintedValue> responseItems = List.of(new PrintedValue().var("x").value(3L));
+        List<PrintedValueDto> responseItems = List.of(new PrintedValueDto().var("x").value(3L));
 
-        when(converter.toDomainInstructions(any(ExecuteProgramRequest.class))).thenReturn(domainInstructions);
+        when(converter.toDomainInstructions(any(ExecuteProgramRequestDto.class))).thenReturn(domainInstructions);
         when(executionService.execute(domainInstructions)).thenReturn(executionResults);
         when(converter.toPrintedValues(executionResults)).thenReturn(responseItems);
 
@@ -68,14 +68,15 @@ class CalculatorControllerTest {
                 .andExpect(jsonPath("$.items[0].var").value("x"))
                 .andExpect(jsonPath("$.items[0].value").value(3));
 
-        ArgumentCaptor<ExecuteProgramRequest> requestCaptor = ArgumentCaptor.forClass(ExecuteProgramRequest.class);
+        ArgumentCaptor<ExecuteProgramRequestDto> requestCaptor =
+                ArgumentCaptor.forClass(ExecuteProgramRequestDto.class);
         verify(converter).toDomainInstructions(requestCaptor.capture());
-        ExecuteProgramRequest parsedRequest = requestCaptor.getValue();
+        ExecuteProgramRequestDto parsedRequest = requestCaptor.getValue();
 
         assertEquals(2, parsedRequest.getInstructions().size());
         ru.itmo.calculator.openapi.model.CalcInstructionDto calc =
                 (ru.itmo.calculator.openapi.model.CalcInstructionDto) parsedRequest.getInstructions().getFirst();
-        assertEquals(Operation.PLUS, calc.getOp());
+        assertEquals(OperationDto.PLUS, calc.getOp());
         assertTrue(calc.getLeft() instanceof LiteralOperandValue);
         assertTrue(parsedRequest.getInstructions().get(1)
                 instanceof ru.itmo.calculator.openapi.model.PrintInstructionDto);
@@ -104,7 +105,7 @@ class CalculatorControllerTest {
                 }
                 """;
 
-        when(converter.toDomainInstructions(any(ExecuteProgramRequest.class)))
+        when(converter.toDomainInstructions(any(ExecuteProgramRequestDto.class)))
                 .thenThrow(new IllegalArgumentException("boom"));
 
         mockMvc.perform(post("/api/v1/executions").contentType(MediaType.APPLICATION_JSON).content(requestBody))

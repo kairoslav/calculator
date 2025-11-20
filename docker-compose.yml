@@ -1,0 +1,37 @@
+version: "3.9"
+
+services:
+  app:
+    build: .
+    container_name: calculator-app
+    ports:
+      - "8080:8080"
+    environment:
+      - JAVA_TOOL_OPTIONS=-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://calculator-app:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  grpcui:
+    image: fullstorydev/grpcui:latest
+    container_name: calculator-grpcui
+    depends_on:
+      app:
+        condition: service_healthy
+    volumes:
+      - ./src/main/resources/proto:/proto:ro
+    command: [
+      "-plaintext",
+      "-bind", "0.0.0.0",
+      "-port", "8081",
+      "-import-path", "/proto",
+      "-proto", "calculator.proto",
+      "app:8080"
+    ]
+    ports:
+      - "8081:8081"  # grpcui web UI
+
+networks:
+  default:
+    name: calculator-net

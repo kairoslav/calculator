@@ -6,9 +6,9 @@ import ru.itmo.calculator.dto.Instruction;
 import ru.itmo.calculator.execution.InstructionExecutionService;
 import ru.itmo.calculator.converter.CalculatorApiConverter;
 import ru.itmo.calculator.openapi.api.CalculatorApi;
-import ru.itmo.calculator.openapi.model.ExecuteProgramRequest;
-import ru.itmo.calculator.openapi.model.ExecuteProgramResponse;
-import ru.itmo.calculator.openapi.model.PrintedValue;
+import ru.itmo.calculator.openapi.model.ExecuteProgramRequestDto;
+import ru.itmo.calculator.openapi.model.ExecuteProgramResponseDto;
+import ru.itmo.calculator.openapi.model.PrintedValueDto;
 
 @RestController
 public class CalculatorController implements CalculatorApi {
@@ -22,10 +22,10 @@ public class CalculatorController implements CalculatorApi {
     }
 
     @Override
-    public ExecuteProgramResponse executeProgram(ExecuteProgramRequest executeProgramRequest) {
-        List<Instruction> domainInstructions = converter.toDomainInstructions(executeProgramRequest);
-        List<PrintedValue> items =
+    public ExecuteProgramResponseDto executeProgram(ExecuteProgramRequestDto executeProgramRequestDto) {
+        List<Instruction> domainInstructions = converter.toDomainInstructions(executeProgramRequestDto);
+        List<PrintedValueDto> items =
                 converter.toPrintedValues(executionService.execute(domainInstructions));
-        return new ExecuteProgramResponse().items(items);
+        return new ExecuteProgramResponseDto().items(items);
     }
 }
