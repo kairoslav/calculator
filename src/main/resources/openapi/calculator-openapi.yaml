@@ -100,14 +100,14 @@ components:
   schemas:
     ExecuteProgramRequest:
       type: object
-      required:
-        - instructions
       properties:
         instructions:
           type: array
           minItems: 1
           items:
             $ref: '#/components/schemas/Instruction'
+      required:
+        - instructions
     Instruction:
       oneOf:
         - $ref: '#/components/schemas/CalcInstruction'
@@ -135,9 +135,11 @@ components:
         var:
           $ref: '#/components/schemas/VariableName'
         left:
-          $ref: '#/components/schemas/Operand'
+          type: integer
+          format: int64
         right:
-          $ref: '#/components/schemas/Operand'
+          type: integer
+          format: int64
     PrintInstruction:
       type: object
       required:
@@ -154,12 +156,6 @@ components:
       type: string
       description: Arithmetic operator supported by the service
       enum: ['+', '-', '*']
-    Operand:
-      description: Literal operand value or reference to an existing variable
-      oneOf:
-        - type: integer
-          format: int64
-        - $ref: '#/components/schemas/VariableName'
     VariableName:
       type: string
       description: Identifier of a variable created by previous `calc` operations

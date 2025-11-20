@@ -159,6 +159,7 @@
                                 <useSpringBoot3>true</useSpringBoot3>
                                 <openApiNullable>false</openApiNullable>
                                 <skipDefaultInterface>true</skipDefaultInterface>
+                                <useResponseEntity>false</useResponseEntity>
                             </configOptions>
                         </configuration>
                     </execution>
