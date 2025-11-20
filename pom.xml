@@ -122,6 +122,8 @@
                     <excludes>
                         <exclude>**/*MockitoMock*</exclude>
                         <exclude>**/*$auxiliary$*</exclude>
+                        <exclude>ru/itmo/calculator/generated/grpc/**</exclude>
+                        <exclude>ru/itmo/calculator/openapi/**</exclude>
                     </excludes>
                 </configuration>
                 <executions>

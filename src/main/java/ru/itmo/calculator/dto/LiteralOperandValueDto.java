@@ -1,14 +1,14 @@
-package ru.itmo.calculator.openapi.model;
+package ru.itmo.calculator.dto;
 
 import java.util.Objects;
 
 /**
  * Wrapper for literal values in OpenAPI requests.
  */
-public final class LiteralOperandValue implements Operand {
+public final class LiteralOperandValueDto implements OperandDto {
     private final long value;
 
-    public LiteralOperandValue(long value) {
+    public LiteralOperandValueDto(long value) {
         this.value = value;
     }
 
@@ -21,7 +21,7 @@ public final class LiteralOperandValue implements Operand {
         if (this == o) {
             return true;
         }
-        if (!(o instanceof LiteralOperandValue that)) {
+        if (!(o instanceof LiteralOperandValueDto that)) {
             return false;
         }
         return value == that.value;

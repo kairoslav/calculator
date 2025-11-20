@@ -5,27 +5,27 @@ import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import java.io.IOException;
-import ru.itmo.calculator.openapi.model.LiteralOperandValue;
-import ru.itmo.calculator.openapi.model.Operand;
-import ru.itmo.calculator.openapi.model.VariableOperandValue;
+import ru.itmo.calculator.dto.LiteralOperandValueDto;
+import ru.itmo.calculator.dto.OperandDto;
+import ru.itmo.calculator.dto.VariableOperandValueDto;
 
-class OperandDeserializer extends StdDeserializer<Operand> {
+class OperandDeserializer extends StdDeserializer<OperandDto> {
 
     OperandDeserializer() {
-        super(Operand.class);
+        super(OperandDto.class);
     }
 
     @Override
-    public Operand deserialize(JsonParser parser, DeserializationContext ctxt) throws IOException {
+    public OperandDto deserialize(JsonParser parser, DeserializationContext ctxt) throws IOException {
         JsonToken token = parser.currentToken();
         if (token == JsonToken.VALUE_NUMBER_INT) {
-            return new LiteralOperandValue(parser.getLongValue());
+            return new LiteralOperandValueDto(parser.getLongValue());
         }
         if (token == JsonToken.VALUE_STRING) {
-            return new VariableOperandValue(parser.getValueAsString());
+            return new VariableOperandValueDto(parser.getValueAsString());
         }
-        return (Operand)
+        return (OperandDto)
                 ctxt.handleUnexpectedToken(
-                        Operand.class, token, parser, "Operand must be an integer literal or variable name");
+                        OperandDto.class, token, parser, "OperandDto must be an integer literal or variable name");
     }
 }

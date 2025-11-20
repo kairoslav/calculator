@@ -4,8 +4,8 @@ import java.util.List;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import org.springframework.grpc.server.service.GrpcService;
-import ru.itmo.calculator.dto.Instruction;
-import ru.itmo.calculator.dto.PrintResult;
+import ru.itmo.calculator.dto.InstructionDto;
+import ru.itmo.calculator.dto.PrintResultDto;
 import ru.itmo.calculator.execution.InstructionExecutionService;
 import ru.itmo.calculator.generated.grpc.ExecuteProgramRequest;
 import ru.itmo.calculator.generated.grpc.ExecuteProgramResponse;
@@ -26,8 +26,8 @@ public class InstructionExecutorService extends InstructionExecutorGrpc.Instruct
     @Override
     public void execute(ExecuteProgramRequest request, StreamObserver<ExecuteProgramResponse> responseObserver) {
         try {
-            List<Instruction> instructions = converter.toDomainInstructions(request);
-            List<PrintResult> results = executionService.execute(instructions);
+            List<InstructionDto> instructions = converter.toDomainInstructions(request);
+            List<PrintResultDto> results = executionService.execute(instructions);
             responseObserver.onNext(converter.toResponse(results));
             responseObserver.onCompleted();
         } catch (Exception e) {

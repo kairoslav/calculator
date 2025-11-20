@@ -17,12 +17,12 @@ import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import ru.itmo.calculator.dto.ArithmeticOp;
-import ru.itmo.calculator.dto.CalcInstruction;
-import ru.itmo.calculator.dto.Instruction;
-import ru.itmo.calculator.dto.LiteralOperand;
-import ru.itmo.calculator.dto.PrintInstruction;
-import ru.itmo.calculator.dto.PrintResult;
+import ru.itmo.calculator.dto.ArithmeticOpDto;
+import ru.itmo.calculator.dto.CalcInstructionDto;
+import ru.itmo.calculator.dto.InstructionDto;
+import ru.itmo.calculator.dto.LiteralOperandDto;
+import ru.itmo.calculator.dto.PrintInstructionDto;
+import ru.itmo.calculator.dto.PrintResultDto;
 import ru.itmo.calculator.execution.InstructionExecutionService;
 import ru.itmo.calculator.generated.grpc.ExecuteProgramRequest;
 import ru.itmo.calculator.generated.grpc.ExecuteProgramResponse;
@@ -35,7 +35,7 @@ class InstructionExecutorServiceTest {
     @Test
     void executesProgramUsingExecutionService() {
         InstructionExecutionService executionService = mock(InstructionExecutionService.class);
-        when(executionService.execute(anyList())).thenReturn(List.of(new PrintResult("x", 3)));
+        when(executionService.execute(anyList())).thenReturn(List.of(new PrintResultDto("x", 3)));
 
         InstructionExecutorService service =
                 new InstructionExecutorService(executionService, new GrpcInstructionConverter());
@@ -43,18 +43,18 @@ class InstructionExecutorServiceTest {
 
         service.execute(buildRequest(), observer);
 
-        ArgumentCaptor<List<Instruction>> captor = ArgumentCaptor.forClass(List.class);
+        ArgumentCaptor<List<InstructionDto>> captor = ArgumentCaptor.forClass(List.class);
         verify(executionService).execute(captor.capture());
-        List<Instruction> domainInstructions = captor.getValue();
+        List<InstructionDto> domainInstructions = captor.getValue();
         assertEquals(2, domainInstructions.size());
 
-        CalcInstruction calc = (CalcInstruction) domainInstructions.get(0);
+        CalcInstructionDto calc = (CalcInstructionDto) domainInstructions.get(0);
         assertEquals("x", calc.var());
-        assertEquals(ArithmeticOp.ADD, calc.op());
-        assertEquals(new LiteralOperand(1), calc.left());
-        assertEquals(new LiteralOperand(2), calc.right());
+        assertEquals(ArithmeticOpDto.ADD, calc.op());
+        assertEquals(new LiteralOperandDto(1), calc.left());
+        assertEquals(new LiteralOperandDto(2), calc.right());
 
-        PrintInstruction print = (PrintInstruction) domainInstructions.get(1);
+        PrintInstructionDto print = (PrintInstructionDto) domainInstructions.get(1);
         assertEquals("x", print.var());
 
         assertTrue(observer.completed);
@@ -89,18 +89,18 @@ class InstructionExecutorServiceTest {
     private ExecuteProgramRequest buildRequest() {
         return ExecuteProgramRequest.newBuilder()
                 .addInstructions(
-                        ru.itmo.calculator.generated.grpc.Instruction.newBuilder()
+                        ru.itmo.calculator.generated.grpc.InstructionDto.newBuilder()
                                 .setCalc(
-                                        ru.itmo.calculator.generated.grpc.CalcInstruction.newBuilder()
+                                        ru.itmo.calculator.generated.grpc.CalcInstructionDto.newBuilder()
                                                 .setVar("x")
                                                 .setOp(Operation.OPERATION_ADD)
-                                                .setLeft(ru.itmo.calculator.generated.grpc.Operand.newBuilder().setLiteral(1).build())
-                                                .setRight(ru.itmo.calculator.generated.grpc.Operand.newBuilder().setLiteral(2).build())
+                                                .setLeft(ru.itmo.calculator.generated.grpc.OperandDto.newBuilder().setLiteral(1).build())
+                                                .setRight(ru.itmo.calculator.generated.grpc.OperandDto.newBuilder().setLiteral(2).build())
                                                 .build())
                                 .build())
                 .addInstructions(
-                        ru.itmo.calculator.generated.grpc.Instruction.newBuilder()
-                                .setPrint(ru.itmo.calculator.generated.grpc.PrintInstruction.newBuilder().setVar("x").build())
+                        ru.itmo.calculator.generated.grpc.InstructionDto.newBuilder()
+                                .setPrint(ru.itmo.calculator.generated.grpc.PrintInstructionDto.newBuilder().setVar("x").build())
                                 .build())
                 .build();
     }

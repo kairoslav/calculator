@@ -3,14 +3,14 @@ package ru.itmo.calculator.dto;
 /**
  * Supported arithmetic operations.
  */
-public enum ArithmeticOp {
+public enum ArithmeticOpDto {
     ADD("+"),
     SUBTRACT("-"),
     MULTIPLY("*");
 
     private final String symbol;
 
-    ArithmeticOp(String symbol) {
+    ArithmeticOpDto(String symbol) {
         this.symbol = symbol;
     }
 
@@ -18,8 +18,8 @@ public enum ArithmeticOp {
         return symbol;
     }
 
-    public static ArithmeticOp fromSymbol(String raw) {
-        for (ArithmeticOp op : values()) {
+    public static ArithmeticOpDto fromSymbol(String raw) {
+        for (ArithmeticOpDto op : values()) {
             if (op.symbol.equals(raw)) {
                 return op;
             }

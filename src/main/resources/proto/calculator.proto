@@ -12,24 +12,24 @@ service InstructionExecutor {
 }
 
 message ExecuteProgramRequest {
-  repeated Instruction instructions = 1;
+  repeated InstructionDto instructions = 1;
 }
 
-message Instruction {
+message InstructionDto {
   oneof instruction_kind {
-    CalcInstruction calc = 1;
-    PrintInstruction print = 2;
+    CalcInstructionDto calc = 1;
+    PrintInstructionDto print = 2;
   }
 }
 
-message CalcInstruction {
+message CalcInstructionDto {
   Operation op = 1;
   string var = 2;
-  Operand left = 3;
-  Operand right = 4;
+  OperandDto left = 3;
+  OperandDto right = 4;
 }
 
-message PrintInstruction {
+message PrintInstructionDto {
   string var = 1;
 }
 
@@ -40,7 +40,7 @@ enum Operation {
   OPERATION_MULTIPLY = 3;
 }
 
-message Operand {
+message OperandDto {
   oneof value {
     int64 literal = 1;
     string variable = 2;

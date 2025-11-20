@@ -2,7 +2,7 @@ package ru.itmo.calculator.controller;
 
 import java.util.List;
 import org.springframework.web.bind.annotation.RestController;
-import ru.itmo.calculator.dto.Instruction;
+import ru.itmo.calculator.dto.InstructionDto;
 import ru.itmo.calculator.execution.InstructionExecutionService;
 import ru.itmo.calculator.converter.CalculatorApiConverter;
 import ru.itmo.calculator.openapi.api.CalculatorApi;
@@ -23,7 +23,7 @@ public class CalculatorController implements CalculatorApi {
 
     @Override
     public ExecuteProgramResponse executeProgram(ExecuteProgramRequest executeProgramRequest) {
-        List<Instruction> domainInstructions = converter.toDomainInstructions(executeProgramRequest);
+        List<InstructionDto> domainInstructions = converter.toDomainInstructions(executeProgramRequest);
         List<PrintedValue> items =
                 converter.toPrintedValues(executionService.execute(domainInstructions));
         return new ExecuteProgramResponse().items(items);

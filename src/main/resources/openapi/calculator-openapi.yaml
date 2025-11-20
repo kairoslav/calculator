@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: Calculator Instruction Execution API
+  title: Calculator InstructionDto Execution API
   version: 1.0.0
   description: |
     HTTP interface for submitting calculator instruction lists. The service accepts
@@ -110,22 +110,22 @@ components:
           type: array
           minItems: 1
           items:
-            $ref: '#/components/schemas/Instruction'
+            $ref: '#/components/schemas/InstructionDto'
       required:
         - instructions
-    Instruction:
+    InstructionDto:
       properties:
         type:
           $ref: '#/components/schemas/InstructionType'
       oneOf:
-        - $ref: '#/components/schemas/CalcInstruction'
-        - $ref: '#/components/schemas/PrintInstruction'
+        - $ref: '#/components/schemas/CalcInstructionDto'
+        - $ref: '#/components/schemas/PrintInstructionDto'
       discriminator:
         propertyName: type
         mapping:
-          calc: '#/components/schemas/CalcInstruction'
-          print: '#/components/schemas/PrintInstruction'
-    CalcInstruction:
+          calc: '#/components/schemas/CalcInstructionDto'
+          print: '#/components/schemas/PrintInstructionDto'
+    CalcInstructionDto:
       type: object
       required:
         - type
@@ -141,10 +141,10 @@ components:
         var:
           $ref: '#/components/schemas/VariableName'
         left:
-          $ref: '#/components/schemas/Operand'
+          $ref: '#/components/schemas/OperandDto'
         right:
-          $ref: '#/components/schemas/Operand'
-    PrintInstruction:
+          $ref: '#/components/schemas/OperandDto'
+    PrintInstructionDto:
       type: object
       required:
         - type
@@ -156,7 +156,7 @@ components:
           $ref: '#/components/schemas/VariableName'
     InstructionType:
       type: string
-      description: Instruction type
+      description: InstructionDto type
       enum:
         - calc
         - print
@@ -164,7 +164,7 @@ components:
       type: string
       description: Arithmetic operator supported by the service
       enum: ['+', '-', '*']
-    Operand:
+    OperandDto:
       description: Either a literal value or a reference to another variable
       oneOf:
         - type: integer

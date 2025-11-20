@@ -1,14 +1,14 @@
-package ru.itmo.calculator.openapi.model;
+package ru.itmo.calculator.dto;
 
 import java.util.Objects;
 
 /**
  * Wrapper for variable references in OpenAPI requests.
  */
-public final class VariableOperandValue implements Operand {
+public final class VariableOperandValueDto implements OperandDto {
     private final String name;
 
-    public VariableOperandValue(String name) {
+    public VariableOperandValueDto(String name) {
         this.name = name;
     }
 
@@ -21,7 +21,7 @@ public final class VariableOperandValue implements Operand {
         if (this == o) {
             return true;
         }
-        if (!(o instanceof VariableOperandValue that)) {
+        if (!(o instanceof VariableOperandValueDto that)) {
             return false;
         }
         return Objects.equals(name, that.name);

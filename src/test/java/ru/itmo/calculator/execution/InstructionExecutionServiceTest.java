@@ -12,13 +12,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import ru.itmo.calculator.dto.ArithmeticOp;
-import ru.itmo.calculator.dto.CalcInstruction;
-import ru.itmo.calculator.dto.Instruction;
-import ru.itmo.calculator.dto.LiteralOperand;
-import ru.itmo.calculator.dto.PrintInstruction;
-import ru.itmo.calculator.dto.PrintResult;
-import ru.itmo.calculator.dto.VariableOperand;
+import ru.itmo.calculator.dto.ArithmeticOpDto;
+import ru.itmo.calculator.dto.CalcInstructionDto;
+import ru.itmo.calculator.dto.InstructionDto;
+import ru.itmo.calculator.dto.LiteralOperandDto;
+import ru.itmo.calculator.dto.PrintInstructionDto;
+import ru.itmo.calculator.dto.PrintResultDto;
+import ru.itmo.calculator.dto.VariableOperandDto;
 
 class InstructionExecutionServiceTest {
 
@@ -28,22 +28,22 @@ class InstructionExecutionServiceTest {
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("taskExamples")
-    void executesTaskExamples(String name, List<Instruction> program, List<PrintResult> expected) {
-        List<PrintResult> result = serviceWithNoDelay().execute(program);
+    void executesTaskExamples(String name, List<InstructionDto> program, List<PrintResultDto> expected) {
+        List<PrintResultDto> result = serviceWithNoDelay().execute(program);
 
         assertEquals(expected, result, name);
     }
 
     @Test
     void computesLinearDependencies() {
-        List<Instruction> program =
+        List<InstructionDto> program =
                 List.of(
-                        new CalcInstruction("x", ArithmeticOp.ADD, new LiteralOperand(1), new LiteralOperand(2)),
-                        new PrintInstruction("x"));
+                        new CalcInstructionDto("x", ArithmeticOpDto.ADD, new LiteralOperandDto(1), new LiteralOperandDto(2)),
+                        new PrintInstructionDto("x"));
 
-        List<PrintResult> result = serviceWithNoDelay().execute(program);
+        List<PrintResultDto> result = serviceWithNoDelay().execute(program);
 
-        assertEquals(List.of(new PrintResult("x", 3)), result);
+        assertEquals(List.of(new PrintResultDto("x", 3)), result);
     }
 
     @Test
@@ -52,33 +52,33 @@ class InstructionExecutionServiceTest {
         InstructionExecutionService service =
                 new InstructionExecutionService(ForkJoinPool.commonPool(), Duration.ZERO, var -> executed.incrementAndGet());
 
-        List<Instruction> program =
+        List<InstructionDto> program =
                 List.of(
-                        new CalcInstruction("x", ArithmeticOp.ADD, new LiteralOperand(10), new LiteralOperand(2)),
-                        new CalcInstruction("y", ArithmeticOp.MULTIPLY, new VariableOperand("x"), new LiteralOperand(5)),
-                        new CalcInstruction("q", ArithmeticOp.SUBTRACT, new VariableOperand("y"), new LiteralOperand(20)),
-                        new CalcInstruction("unusedA", ArithmeticOp.ADD, new VariableOperand("y"), new LiteralOperand(100)),
-                        new CalcInstruction(
-                                "unusedB", ArithmeticOp.MULTIPLY, new VariableOperand("unusedA"), new LiteralOperand(2)),
-                        new PrintInstruction("q"),
-                        new CalcInstruction("z", ArithmeticOp.SUBTRACT, new VariableOperand("x"), new LiteralOperand(15)),
-                        new PrintInstruction("z"),
-                        new CalcInstruction("ignoreC", ArithmeticOp.ADD, new VariableOperand("z"), new VariableOperand("y")),
-                        new PrintInstruction("x"));
+                        new CalcInstructionDto("x", ArithmeticOpDto.ADD, new LiteralOperandDto(10), new LiteralOperandDto(2)),
+                        new CalcInstructionDto("y", ArithmeticOpDto.MULTIPLY, new VariableOperandDto("x"), new LiteralOperandDto(5)),
+                        new CalcInstructionDto("q", ArithmeticOpDto.SUBTRACT, new VariableOperandDto("y"), new LiteralOperandDto(20)),
+                        new CalcInstructionDto("unusedA", ArithmeticOpDto.ADD, new VariableOperandDto("y"), new LiteralOperandDto(100)),
+                        new CalcInstructionDto(
+                                "unusedB", ArithmeticOpDto.MULTIPLY, new VariableOperandDto("unusedA"), new LiteralOperandDto(2)),
+                        new PrintInstructionDto("q"),
+                        new CalcInstructionDto("z", ArithmeticOpDto.SUBTRACT, new VariableOperandDto("x"), new LiteralOperandDto(15)),
+                        new PrintInstructionDto("z"),
+                        new CalcInstructionDto("ignoreC", ArithmeticOpDto.ADD, new VariableOperandDto("z"), new VariableOperandDto("y")),
+                        new PrintInstructionDto("x"));
 
-        List<PrintResult> result = service.execute(program);
+        List<PrintResultDto> result = service.execute(program);
 
-        assertEquals(List.of(new PrintResult("q", 40), new PrintResult("z", -3), new PrintResult("x", 12)), result);
+        assertEquals(List.of(new PrintResultDto("q", 40), new PrintResultDto("z", -3), new PrintResultDto("x", 12)), result);
         assertEquals(4, executed.get(), "Only required operations should be executed");
     }
 
     @Test
     void detectsCycles() {
-        List<Instruction> program =
+        List<InstructionDto> program =
                 List.of(
-                        new CalcInstruction("a", ArithmeticOp.ADD, new VariableOperand("b"), new LiteralOperand(1)),
-                        new CalcInstruction("b", ArithmeticOp.ADD, new VariableOperand("a"), new LiteralOperand(1)),
-                        new PrintInstruction("a"));
+                        new CalcInstructionDto("a", ArithmeticOpDto.ADD, new VariableOperandDto("b"), new LiteralOperandDto(1)),
+                        new CalcInstructionDto("b", ArithmeticOpDto.ADD, new VariableOperandDto("a"), new LiteralOperandDto(1)),
+                        new PrintInstructionDto("a"));
 
         IllegalArgumentException ex =
                 assertThrows(IllegalArgumentException.class, () -> serviceWithNoDelay().execute(program));
@@ -87,11 +87,11 @@ class InstructionExecutionServiceTest {
 
     @Test
     void rejectsDuplicateDefinitions() {
-        List<Instruction> program =
+        List<InstructionDto> program =
                 List.of(
-                        new CalcInstruction("x", ArithmeticOp.ADD, new LiteralOperand(1), new LiteralOperand(1)),
-                        new CalcInstruction("x", ArithmeticOp.SUBTRACT, new LiteralOperand(2), new LiteralOperand(1)),
-                        new PrintInstruction("x"));
+                        new CalcInstructionDto("x", ArithmeticOpDto.ADD, new LiteralOperandDto(1), new LiteralOperandDto(1)),
+                        new CalcInstructionDto("x", ArithmeticOpDto.SUBTRACT, new LiteralOperandDto(2), new LiteralOperandDto(1)),
+                        new PrintInstructionDto("x"));
 
         IllegalArgumentException ex =
                 assertThrows(IllegalArgumentException.class, () -> serviceWithNoDelay().execute(program));
@@ -100,7 +100,7 @@ class InstructionExecutionServiceTest {
 
     @Test
     void failsWhenPrintsMissingVariable() {
-        List<Instruction> program = List.of(new PrintInstruction("missing"));
+        List<InstructionDto> program = List.of(new PrintInstructionDto("missing"));
 
         IllegalArgumentException ex =
                 assertThrows(IllegalArgumentException.class, () -> serviceWithNoDelay().execute(program));
@@ -109,10 +109,10 @@ class InstructionExecutionServiceTest {
 
     @Test
     void failsWhenDependencyMissing() {
-        List<Instruction> program =
+        List<InstructionDto> program =
                 List.of(
-                        new CalcInstruction("x", ArithmeticOp.ADD, new VariableOperand("y"), new LiteralOperand(1)),
-                        new PrintInstruction("x"));
+                        new CalcInstructionDto("x", ArithmeticOpDto.ADD, new VariableOperandDto("y"), new LiteralOperandDto(1)),
+                        new PrintInstructionDto("x"));
 
         IllegalArgumentException ex =
                 assertThrows(IllegalArgumentException.class, () -> serviceWithNoDelay().execute(program));
@@ -130,50 +130,50 @@ class InstructionExecutionServiceTest {
                 Arguments.of(
                         "Task example 1: simple add and print",
                         List.of(
-                                new CalcInstruction(
-                                        "x", ArithmeticOp.ADD, new LiteralOperand(1), new LiteralOperand(2)),
-                                new PrintInstruction("x")),
-                        List.of(new PrintResult("x", 3))),
+                                new CalcInstructionDto(
+                                        "x", ArithmeticOpDto.ADD, new LiteralOperandDto(1), new LiteralOperandDto(2)),
+                                new PrintInstructionDto("x")),
+                        List.of(new PrintResultDto("x", 3))),
                 Arguments.of(
                         "Task example 2: out-of-order print and zero multiplication",
                         List.of(
-                                new CalcInstruction(
-                                        "x", ArithmeticOp.ADD, new LiteralOperand(10), new LiteralOperand(2)),
-                                new PrintInstruction("x"),
-                                new CalcInstruction(
-                                        "y", ArithmeticOp.SUBTRACT, new VariableOperand("x"), new LiteralOperand(3)),
-                                new CalcInstruction(
-                                        "z", ArithmeticOp.MULTIPLY, new VariableOperand("x"), new VariableOperand("y")),
-                                new PrintInstruction("w"),
-                                new CalcInstruction(
-                                        "w", ArithmeticOp.MULTIPLY, new VariableOperand("z"), new LiteralOperand(0))),
-                        List.of(new PrintResult("x", 12), new PrintResult("w", 0))),
+                                new CalcInstructionDto(
+                                        "x", ArithmeticOpDto.ADD, new LiteralOperandDto(10), new LiteralOperandDto(2)),
+                                new PrintInstructionDto("x"),
+                                new CalcInstructionDto(
+                                        "y", ArithmeticOpDto.SUBTRACT, new VariableOperandDto("x"), new LiteralOperandDto(3)),
+                                new CalcInstructionDto(
+                                        "z", ArithmeticOpDto.MULTIPLY, new VariableOperandDto("x"), new VariableOperandDto("y")),
+                                new PrintInstructionDto("w"),
+                                new CalcInstructionDto(
+                                        "w", ArithmeticOpDto.MULTIPLY, new VariableOperandDto("z"), new LiteralOperandDto(0))),
+                        List.of(new PrintResultDto("x", 12), new PrintResultDto("w", 0))),
                 Arguments.of(
                         "Task example 3: skip unused branches and preserve print order",
                         List.of(
-                                new CalcInstruction(
-                                        "x", ArithmeticOp.ADD, new LiteralOperand(10), new LiteralOperand(2)),
-                                new CalcInstruction(
-                                        "y", ArithmeticOp.MULTIPLY, new VariableOperand("x"), new LiteralOperand(5)),
-                                new CalcInstruction(
-                                        "q", ArithmeticOp.SUBTRACT, new VariableOperand("y"), new LiteralOperand(20)),
-                                new CalcInstruction(
-                                        "unusedA", ArithmeticOp.ADD, new VariableOperand("y"), new LiteralOperand(100)),
-                                new CalcInstruction(
+                                new CalcInstructionDto(
+                                        "x", ArithmeticOpDto.ADD, new LiteralOperandDto(10), new LiteralOperandDto(2)),
+                                new CalcInstructionDto(
+                                        "y", ArithmeticOpDto.MULTIPLY, new VariableOperandDto("x"), new LiteralOperandDto(5)),
+                                new CalcInstructionDto(
+                                        "q", ArithmeticOpDto.SUBTRACT, new VariableOperandDto("y"), new LiteralOperandDto(20)),
+                                new CalcInstructionDto(
+                                        "unusedA", ArithmeticOpDto.ADD, new VariableOperandDto("y"), new LiteralOperandDto(100)),
+                                new CalcInstructionDto(
                                         "unusedB",
-                                        ArithmeticOp.MULTIPLY,
-                                        new VariableOperand("unusedA"),
-                                        new LiteralOperand(2)),
-                                new PrintInstruction("q"),
-                                new CalcInstruction(
-                                        "z", ArithmeticOp.SUBTRACT, new VariableOperand("x"), new LiteralOperand(15)),
-                                new PrintInstruction("z"),
-                                new CalcInstruction(
-                                        "ignoreC", ArithmeticOp.ADD, new VariableOperand("z"), new VariableOperand("y")),
-                                new PrintInstruction("x")),
+                                        ArithmeticOpDto.MULTIPLY,
+                                        new VariableOperandDto("unusedA"),
+                                        new LiteralOperandDto(2)),
+                                new PrintInstructionDto("q"),
+                                new CalcInstructionDto(
+                                        "z", ArithmeticOpDto.SUBTRACT, new VariableOperandDto("x"), new LiteralOperandDto(15)),
+                                new PrintInstructionDto("z"),
+                                new CalcInstructionDto(
+                                        "ignoreC", ArithmeticOpDto.ADD, new VariableOperandDto("z"), new VariableOperandDto("y")),
+                                new PrintInstructionDto("x")),
                         List.of(
-                                new PrintResult("q", 40),
-                                new PrintResult("z", -3),
-                                new PrintResult("x", 12))));
+                                new PrintResultDto("q", 40),
+                                new PrintResultDto("z", -3),
+                                new PrintResultDto("x", 12))));
     }
 }

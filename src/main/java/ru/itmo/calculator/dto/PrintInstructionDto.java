@@ -1,10 +1,10 @@
 package ru.itmo.calculator.dto;
 
 /**
- * Instruction that requests printing a variable value.
+ * Instruction DTO that requests printing a variable value.
  */
-public record PrintInstruction(String var) implements Instruction {
-    public PrintInstruction {
+public record PrintInstructionDto(String var) implements InstructionDto {
+    public PrintInstructionDto {
         if (var == null || var.isBlank()) {
             throw new IllegalArgumentException("Variable name must be provided");
         }
