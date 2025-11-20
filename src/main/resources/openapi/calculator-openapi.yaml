@@ -9,9 +9,14 @@ info:
 servers:
   - url: http://localhost:8080
     description: Local development server
+tags:
+  - name: calculator
+    description: Everything about your Pets
 paths:
   /api/v1/executions:
     post:
+      tags:
+        - calculator
       summary: Execute a list of instructions
       description: |
         Accepts a strictly ordered list of calculator instructions, executes the
