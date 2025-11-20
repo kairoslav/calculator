@@ -8,6 +8,13 @@ import java.util.List;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
+import ru.itmo.calculator.dto.ArithmeticOp;
+import ru.itmo.calculator.dto.CalcInstruction;
+import ru.itmo.calculator.dto.Instruction;
+import ru.itmo.calculator.dto.LiteralOperand;
+import ru.itmo.calculator.dto.PrintInstruction;
+import ru.itmo.calculator.dto.PrintResult;
+import ru.itmo.calculator.dto.VariableOperand;
 
 class InstructionExecutionServiceTest {
 
