@@ -44,7 +44,7 @@ public class InstructionExecutionService {
     private final Consumer<String> operationListener;
 
     public InstructionExecutionService() {
-        this(defaultExecutor(), Duration.ofMillis(1000), var -> {});
+        this(defaultExecutor(), Duration.ofMillis(50), var -> {});
     }
 
     public InstructionExecutionService(Executor executor, Duration operationDelay, Consumer<String> operationListener) {
