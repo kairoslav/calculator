@@ -1,21 +1,23 @@
 package ru.itmo.calculator.execution;
 
 import java.time.Duration;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+import java.util.function.LongBinaryOperator;
 import org.springframework.stereotype.Service;
 import ru.itmo.calculator.dto.ArithmeticOp;
 import ru.itmo.calculator.dto.CalcInstruction;
@@ -31,12 +33,18 @@ import ru.itmo.calculator.dto.VariableOperand;
  */
 @Service
 public class InstructionExecutionService {
+    private static final Map<ArithmeticOp, LongBinaryOperator> OPERATION_HANDLERS = Map.of(
+            ArithmeticOp.ADD, (left, right) -> left + right,
+            ArithmeticOp.SUBTRACT, (left, right) -> left - right,
+            ArithmeticOp.MULTIPLY, (left, right) -> left * right);
+    private static final int MIN_PARALLELISM = 2;
+
     private final Executor executor;
     private final Duration operationDelay;
     private final Consumer<String> operationListener;
 
     public InstructionExecutionService() {
-        this(ForkJoinPool.commonPool(), Duration.ofMillis(50), var -> {});
+        this(defaultExecutor(), Duration.ofMillis(1000), var -> {});
     }
 
     public InstructionExecutionService(Executor executor, Duration operationDelay, Consumer<String> operationListener) {
@@ -67,85 +75,121 @@ public class InstructionExecutionService {
             return List.of();
         }
 
-        Set<String> requiredVariables = collectRequiredVariables(printInstructions, calculations);
-        detectCycles(requiredVariables, calculations);
+        ExecutionPlan executionPlan = buildExecutionPlan(printInstructions, calculations);
+        Map<String, CompletableFuture<Long>> futuresByVar = startCalculations(executionPlan);
 
-        Map<String, CompletableFuture<Long>> cache = new ConcurrentHashMap<>();
         List<PrintResult> results = new ArrayList<>();
-
         for (PrintInstruction print : printInstructions) {
-            CompletableFuture<Long> future = resolveVariable(print.var(), requiredVariables, calculations, cache);
+            CompletableFuture<Long> future = futuresByVar.get(print.var());
+            if (future == null) {
+                throw new IllegalArgumentException("Variable is not required: " + print.var());
+            }
             results.add(new PrintResult(print.var(), future.join()));
         }
 
         return results;
     }
 
-    private Set<String> collectRequiredVariables(
+    private ExecutionPlan buildExecutionPlan(
             List<PrintInstruction> printInstructions, Map<String, CalcInstruction> calculations) {
         Set<String> required = new LinkedHashSet<>();
+        Map<String, List<String>> dependenciesByVar = new HashMap<>();
+        Deque<String> stack = new ArrayDeque<>();
+
         for (PrintInstruction print : printInstructions) {
-            collectForVariable(print.var(), required, calculations, new HashSet<>());
+            stack.push(print.var());
         }
-        return required;
-    }
 
-    private void collectForVariable(
-            String var,
-            Set<String> required,
-            Map<String, CalcInstruction> calculations,
-            Set<String> visiting) {
-        if (required.contains(var)) {
-            return;
-        }
-        CalcInstruction instruction = calculations.get(var);
-        if (instruction == null) {
-            throw new IllegalArgumentException("Variable is never calculated: " + var);
-        }
-        if (!visiting.add(var)) {
-            // Early cycle detection to avoid stack overflow; full message produced later.
-            throw new IllegalArgumentException("Cyclic dependency detected for variable: " + var);
-        }
-        for (String dependency : variableDependencies(instruction)) {
-            collectForVariable(dependency, required, calculations, visiting);
-        }
-        visiting.remove(var);
-        required.add(var);
-    }
-
-    private void detectCycles(Set<String> requiredVariables, Map<String, CalcInstruction> calculations) {
-        Map<String, VisitState> states = new HashMap<>();
-        for (String var : requiredVariables) {
-            if (states.get(var) == null) {
-                dfs(var, calculations, requiredVariables, states);
-            }
-        }
-    }
-
-    private void dfs(
-            String var,
-            Map<String, CalcInstruction> calculations,
-            Set<String> requiredVariables,
-            Map<String, VisitState> states) {
-        states.put(var, VisitState.IN_PROGRESS);
-        CalcInstruction instruction = calculations.get(var);
-        if (instruction == null) {
-            return;
-        }
-        for (String dep : variableDependencies(instruction)) {
-            if (!requiredVariables.contains(dep)) {
+        while (!stack.isEmpty()) {
+            String var = stack.pop();
+            if (!required.add(var)) {
                 continue;
             }
-            VisitState state = states.get(dep);
-            if (state == VisitState.IN_PROGRESS) {
-                throw new IllegalArgumentException("Cyclic dependency detected: " + dep + " <-> " + var);
+            CalcInstruction instruction = calculations.get(var);
+            if (instruction == null) {
+                throw new IllegalArgumentException("Variable is never calculated: " + var);
             }
-            if (state == VisitState.DONE) {
-                continue;
+            List<String> deps = variableDependencies(instruction);
+            dependenciesByVar.put(var, deps);
+            for (String dep : deps) {
+                stack.push(dep);
             }
-            dfs(dep, calculations, requiredVariables, states);
         }
-        states.put(var, VisitState.DONE);
+
+        List<String> executionOrder = topologicallySort(required, dependenciesByVar);
+        return new ExecutionPlan(required, calculations, executionOrder);
+    }
+
+    private Map<String, CompletableFuture<Long>> startCalculations(ExecutionPlan plan) {
+        Map<String, CompletableFuture<Long>> futuresByVar = new HashMap<>(plan.requiredVariables().size());
+
+        for (String var : plan.executionOrder()) {
+            CalcInstruction instruction = plan.calculations().get(var);
+            CompletableFuture<Long> leftFuture = resolveOperand(instruction.left(), futuresByVar);
+            CompletableFuture<Long> rightFuture = resolveOperand(instruction.right(), futuresByVar);
+
+            CompletableFuture<Long> result =
+                    leftFuture.thenCombineAsync(rightFuture, (left, right) -> computeOperation(instruction, left, right), executor);
+            futuresByVar.put(var, result);
+        }
+
+        return futuresByVar;
+    }
+
+    private CompletableFuture<Long> resolveOperand(Operand operand, Map<String, CompletableFuture<Long>> futuresByVar) {
+        if (operand instanceof LiteralOperand literal) {
+            return CompletableFuture.completedFuture(literal.value());
+        }
+        if (operand instanceof VariableOperand variable) {
+            CompletableFuture<Long> future = futuresByVar.get(variable.name());
+            if (future == null) {
+                throw new IllegalArgumentException("Variable is not required: " + variable.name());
+            }
+            return future;
+        }
+        throw new IllegalArgumentException("Unknown operand: " + operand);
+    }
+
+    private List<String> topologicallySort(Set<String> required, Map<String, List<String>> dependenciesByVar) {
+        Map<String, Integer> indegree = new HashMap<>();
+        Map<String, List<String>> dependents = new HashMap<>();
+
+        for (String var : required) {
+            indegree.put(var, 0);
+        }
+
+        for (Map.Entry<String, List<String>> entry : dependenciesByVar.entrySet()) {
+            String var = entry.getKey();
+            for (String dependency : entry.getValue()) {
+                indegree.merge(var, 1, Integer::sum);
+                dependents.computeIfAbsent(dependency, key -> new ArrayList<>()).add(var);
+            }
+        }
+
+        Deque<String> queue = new ArrayDeque<>();
+        for (Map.Entry<String, Integer> entry : indegree.entrySet()) {
+            if (entry.getValue() == 0) {
+                queue.add(entry.getKey());
+            }
+        }
+
+        List<String> order = new ArrayList<>(required.size());
+        while (!queue.isEmpty()) {
+            String var = queue.poll();
+            order.add(var);
+            for (String dependent : dependents.getOrDefault(var, List.of())) {
+                int remaining = indegree.computeIfPresent(dependent, (key, value) -> value - 1);
+                if (remaining == 0) {
+                    queue.add(dependent);
+                }
+            }
+        }
+
+        if (order.size() != required.size()) {
+            throw new IllegalArgumentException("Cyclic dependency detected in required variables");
+        }
+
+        return order;
     }
 
     private List<String> variableDependencies(CalcInstruction instruction) {
@@ -159,84 +203,42 @@ public class InstructionExecutionService {
         return deps;
     }
 
-    private CompletableFuture<Long> resolveOperand(
-            Operand operand,
-            Set<String> requiredVariables,
-            Map<String, CalcInstruction> calculations,
-            Map<String, CompletableFuture<Long>> cache) {
-        if (operand instanceof LiteralOperand literal) {
-            return CompletableFuture.completedFuture(literal.value());
+    private long computeOperation(CalcInstruction instruction, long left, long right) {
+        Long fastResult = tryShortCircuit(instruction.op(), left, right);
+        if (fastResult != null) {
+            operationListener.accept(instruction.var());
+            return fastResult;
         }
-        if (operand instanceof VariableOperand variable) {
-            return resolveVariable(variable.name(), requiredVariables, calculations, cache);
-        }
-        throw new IllegalArgumentException("Unknown operand: " + operand);
+
+        waitIfNeeded();
+        operationListener.accept(instruction.var());
+        return OPERATION_HANDLERS.get(instruction.op()).applyAsLong(left, right);
     }
 
-    private CompletableFuture<Long> resolveVariable(
-            String var,
-            Set<String> requiredVariables,
-            Map<String, CalcInstruction> calculations,
-            Map<String, CompletableFuture<Long>> cache) {
-        if (!requiredVariables.contains(var)) {
-            throw new IllegalArgumentException("Variable is not required: " + var);
+    private Long tryShortCircuit(ArithmeticOp op, long left, long right) {
+        if (op == ArithmeticOp.MULTIPLY) {
+            if (left == 0 || right == 0) {
+                return 0L;
+            }
+            if (left == 1) {
+                return right;
+            }
+            if (right == 1) {
+                return left;
+            }
         }
-        CalcInstruction instruction = calculations.get(var);
-        if (instruction == null) {
-            throw new IllegalArgumentException("Variable is never calculated: " + var);
+        if (op == ArithmeticOp.ADD) {
+            if (left == 0) {
+                return right;
+            }
+            if (right == 0) {
+                return left;
+            }
         }
-
-        CompletableFuture<Long> existing = cache.get(var);
-        if (existing != null) {
-            return existing;
+        if (op == ArithmeticOp.SUBTRACT && right == 0) {
+            return left;
         }
-
-        CompletableFuture<Long> placeholder = new CompletableFuture<>();
-        CompletableFuture<Long> previous = cache.putIfAbsent(var, placeholder);
-        if (previous != null) {
-            return previous;
-        }
-
-        try {
-            CompletableFuture<Long> leftFuture =
-                    resolveOperand(instruction.left(), requiredVariables, calculations, cache);
-            CompletableFuture<Long> rightFuture =
-                    resolveOperand(instruction.right(), requiredVariables, calculations, cache);
-
-            leftFuture.thenCombineAsync(
-                            rightFuture,
-                            (left, right) -> {
-                                waitIfNeeded();
-                                operationListener.accept(var);
-                                return applyOperation(instruction.op(), left, right);
-                            },
-                            executor)
-                    .whenComplete(
-                            (value, throwable) -> {
-                                if (throwable != null) {
-                                    Throwable cause = throwable instanceof CompletionException
-                                            ? throwable.getCause()
-                                            : throwable;
-                                    placeholder.completeExceptionally(cause);
-                                } else {
-                                    placeholder.complete(value);
-                                }
-                            });
-        } catch (Throwable t) {
-            cache.remove(var, placeholder);
-            placeholder.completeExceptionally(t);
-            throw t;
-        }
-
-        return placeholder;
-    }
-
-    private long applyOperation(ArithmeticOp op, long left, long right) {
-        return switch (op) {
-            case ADD -> left + right;
-            case SUBTRACT -> left - right;
-            case MULTIPLY -> left * right;
-        };
+        return null;
     }
 
     private void waitIfNeeded() {
@@ -251,8 +253,18 @@ public class InstructionExecutionService {
         }
     }
 
-    private enum VisitState {
-        IN_PROGRESS,
-        DONE
+    private static ExecutorService defaultExecutor() {
+        int parallelism = Math.max(MIN_PARALLELISM, Runtime.getRuntime().availableProcessors());
+        AtomicInteger counter = new AtomicInteger();
+        return Executors.newFixedThreadPool(parallelism, runnable -> {
+            Thread thread = new Thread(runnable);
+            thread.setDaemon(true);
+            thread.setName("calculator-exec-" + counter.incrementAndGet());
+            return thread;
+        });
+    }
+
+    private record ExecutionPlan(
+            Set<String> requiredVariables, Map<String, CalcInstruction> calculations, List<String> executionOrder) {
     }
 }
