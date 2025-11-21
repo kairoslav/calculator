@@ -4,13 +4,15 @@ WORKDIR /app
 
 COPY .mvn .mvn
 COPY mvnw .
-RUN chmod +x mvnw
 COPY pom.xml .
-COPY src ./src
 
-RUN ./mvnw -DskipTests install
+# Cache the .m2 repository
+RUN --mount=type=cache,target=/root/.m2 \
+    ./mvnw dependency:resolve-plugins dependency:resolve # or mvn dependency:go-offline
 
-
+COPY src src
+RUN --mount=type=cache,target=/root/.m2 \
+    ./mvnw package -DskipTests
 
 FROM eclipse-temurin:25-jre
 WORKDIR /app

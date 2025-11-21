@@ -2,10 +2,16 @@ package ru.itmo.calculator.execution;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
@@ -108,6 +114,60 @@ class InstructionExecutionServiceTest {
     }
 
     @Test
+    void returnsEmptyWhenNoPrintsProvided() {
+        AtomicInteger executed = new AtomicInteger();
+        InstructionExecutionService service =
+                new InstructionExecutionService(ForkJoinPool.commonPool(), Duration.ZERO, var -> executed.incrementAndGet());
+
+        List<Instruction> program =
+                List.of(
+                        new CalcInstruction("x", ArithmeticOp.ADD, new LiteralOperand(1), new LiteralOperand(2)),
+                        new CalcInstruction("y", ArithmeticOp.MULTIPLY, new VariableOperand("x"), new LiteralOperand(3)));
+
+        List<PrintResult> result = service.execute(program);
+
+        assertEquals(List.of(), result);
+        assertEquals(0, executed.get(), "No operations should run when nothing is printed");
+    }
+
+    @Test
+    void cachesComputedValuesAcrossPrints() {
+        List<String> executed = Collections.synchronizedList(new ArrayList<>());
+        InstructionExecutionService service =
+                new InstructionExecutionService(command -> command.run(), Duration.ZERO, executed::add);
+
+        List<Instruction> program =
+                List.of(
+                        new CalcInstruction("base", ArithmeticOp.ADD, new LiteralOperand(2), new LiteralOperand(3)),
+                        new CalcInstruction(
+                                "double", ArithmeticOp.MULTIPLY, new VariableOperand("base"), new LiteralOperand(2)),
+                        new CalcInstruction(
+                                "minus", ArithmeticOp.SUBTRACT, new VariableOperand("base"), new LiteralOperand(1)),
+                        new PrintInstruction("double"),
+                        new PrintInstruction("minus"),
+                        new PrintInstruction("base"),
+                        new PrintInstruction("base"));
+
+        List<PrintResult> result = service.execute(program);
+
+        assertEquals(
+                List.of(
+                        new PrintResult("double", 10),
+                        new PrintResult("minus", 4),
+                        new PrintResult("base", 5),
+                        new PrintResult("base", 5)),
+                result);
+        assertEquals(3, executed.size(), "Each variable should only be calculated once");
+        assertTrue(executed.containsAll(List.of("base", "double", "minus")));
+    }
+
+    @Test
+    void failsOnNullInstructionList() {
+        NullPointerException ex = assertThrows(NullPointerException.class, () -> serviceWithNoDelay().execute(null));
+        assertEquals("instructions", ex.getMessage());
+    }
+
+    @Test
     void failsWhenDependencyMissing() {
         List<Instruction> program =
                 List.of(
@@ -117,6 +177,92 @@ class InstructionExecutionServiceTest {
         IllegalArgumentException ex =
                 assertThrows(IllegalArgumentException.class, () -> serviceWithNoDelay().execute(program));
         assertContains(ex.getMessage(), "never calculated");
+    }
+
+    @Test
+    void computesConsecutiveIncrementChainFromAToZ() {
+        InstructionExecutionService service = serviceWithNoDelay();
+        List<Instruction> program = new ArrayList<>();
+        program.add(new CalcInstruction("a", ArithmeticOp.ADD, new LiteralOperand(0), new LiteralOperand(1)));
+
+        char previous = 'a';
+        for (char var = 'b'; var <= 'z'; var++) {
+            program.add(
+                    new CalcInstruction(
+                            String.valueOf(var),
+                            ArithmeticOp.ADD,
+                            new VariableOperand(String.valueOf(previous)),
+                            new LiteralOperand(1)));
+            previous = var;
+        }
+        program.add(new PrintInstruction("z"));
+
+        List<PrintResult> result = service.execute(program);
+
+        assertEquals(List.of(new PrintResult("z", 26)), result);
+    }
+
+    @Test
+    void computesWideDependencyTreeFromAToZ() {
+        Set<String> executed = Collections.newSetFromMap(new ConcurrentHashMap<>());
+        InstructionExecutionService service =
+                new InstructionExecutionService(ForkJoinPool.commonPool(), Duration.ZERO, executed::add);
+
+        List<Instruction> program =
+                List.of(
+                        new CalcInstruction("a", ArithmeticOp.ADD, new LiteralOperand(0), new LiteralOperand(2)),
+                        new CalcInstruction("x", ArithmeticOp.ADD, new VariableOperand("a"), new LiteralOperand(3)),
+                        new CalcInstruction("y", ArithmeticOp.ADD, new VariableOperand("a"), new LiteralOperand(4)),
+                        new CalcInstruction("y2", ArithmeticOp.ADD, new VariableOperand("x"), new LiteralOperand(2)),
+                        new CalcInstruction("z", ArithmeticOp.ADD, new VariableOperand("a"), new VariableOperand("y2")),
+                        new CalcInstruction("z2", ArithmeticOp.ADD, new VariableOperand("y"), new VariableOperand("y2")),
+                        new CalcInstruction(
+                                "unused", ArithmeticOp.MULTIPLY, new VariableOperand("z2"), new LiteralOperand(10)),
+                        new PrintInstruction("z"),
+                        new PrintInstruction("z2"));
+
+        List<PrintResult> result = service.execute(program);
+
+        assertEquals(List.of(new PrintResult("z", 9), new PrintResult("z2", 13)), result);
+        assertEquals(6, executed.size());
+        assertTrue(executed.containsAll(List.of("a", "x", "y", "y2", "z", "z2")));
+        assertFalse(executed.contains("unused"));
+    }
+
+    @Test
+    void computesAlphabetSpanningTreeWithSharedBranches() {
+        Set<String> executed = Collections.newSetFromMap(new ConcurrentHashMap<>());
+        InstructionExecutionService service =
+                new InstructionExecutionService(ForkJoinPool.commonPool(), Duration.ZERO, executed::add);
+
+        List<Instruction> program = new ArrayList<>();
+        program.add(new CalcInstruction("a", ArithmeticOp.ADD, new LiteralOperand(0), new LiteralOperand(1)));
+
+        char previous = 'a';
+        for (char var = 'b'; var <= 'x'; var++) {
+            program.add(new CalcInstruction(
+                    String.valueOf(var),
+                    ArithmeticOp.ADD,
+                    new VariableOperand(String.valueOf(previous)),
+                    new LiteralOperand(1)));
+            previous = var;
+        }
+
+        program.add(new CalcInstruction("y", ArithmeticOp.ADD, new VariableOperand("x"), new VariableOperand("a")));
+        program.add(new CalcInstruction("z", ArithmeticOp.ADD, new VariableOperand("y"), new VariableOperand("b")));
+        program.add(new CalcInstruction("y2", ArithmeticOp.ADD, new VariableOperand("x"), new VariableOperand("c")));
+        program.add(new CalcInstruction("z2", ArithmeticOp.ADD, new VariableOperand("y2"), new VariableOperand("y")));
+        program.add(new PrintInstruction("z"));
+        program.add(new PrintInstruction("z2"));
+
+        List<PrintResult> result = service.execute(program);
+
+        assertEquals(List.of(new PrintResult("z", 27), new PrintResult("z2", 52)), result);
+        for (char var = 'a'; var <= 'z'; var++) {
+            assertTrue(executed.contains(String.valueOf(var)), "Expected execution of " + var);
+        }
+        assertTrue(executed.containsAll(Set.of("y2", "z2")));
+        assertEquals(28, executed.size(), "All variables should be executed exactly once");
     }
 
     private static void assertContains(String actual, String expected) {

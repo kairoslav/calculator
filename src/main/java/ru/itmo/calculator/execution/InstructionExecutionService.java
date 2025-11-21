@@ -11,6 +11,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
@@ -180,26 +181,54 @@ public class InstructionExecutionService {
         if (!requiredVariables.contains(var)) {
             throw new IllegalArgumentException("Variable is not required: " + var);
         }
-        return cache.computeIfAbsent(
-                var,
-                name -> {
-                    CalcInstruction instruction = calculations.get(name);
-                    if (instruction == null) {
-                        throw new IllegalArgumentException("Variable is never calculated: " + name);
-                    }
-                    CompletableFuture<Long> leftFuture =
-                            resolveOperand(instruction.left(), requiredVariables, calculations, cache);
-                    CompletableFuture<Long> rightFuture =
-                            resolveOperand(instruction.right(), requiredVariables, calculations, cache);
-                    return leftFuture.thenCombineAsync(
+        CalcInstruction instruction = calculations.get(var);
+        if (instruction == null) {
+            throw new IllegalArgumentException("Variable is never calculated: " + var);
+        }
+
+        CompletableFuture<Long> existing = cache.get(var);
+        if (existing != null) {
+            return existing;
+        }
+
+        CompletableFuture<Long> placeholder = new CompletableFuture<>();
+        CompletableFuture<Long> previous = cache.putIfAbsent(var, placeholder);
+        if (previous != null) {
+            return previous;
+        }
+
+        try {
+            CompletableFuture<Long> leftFuture =
+                    resolveOperand(instruction.left(), requiredVariables, calculations, cache);
+            CompletableFuture<Long> rightFuture =
+                    resolveOperand(instruction.right(), requiredVariables, calculations, cache);
+
+            leftFuture.thenCombineAsync(
                             rightFuture,
                             (left, right) -> {
                                 waitIfNeeded();
-                                operationListener.accept(name);
+                                operationListener.accept(var);
                                 return applyOperation(instruction.op(), left, right);
                             },
-                            executor);
-                });
+                            executor)
+                    .whenComplete(
+                            (value, throwable) -> {
+                                if (throwable != null) {
+                                    Throwable cause = throwable instanceof CompletionException
+                                            ? throwable.getCause()
+                                            : throwable;
+                                    placeholder.completeExceptionally(cause);
+                                } else {
+                                    placeholder.complete(value);
+                                }
+                            });
+        } catch (Throwable t) {
+            cache.remove(var, placeholder);
+            placeholder.completeExceptionally(t);
+            throw t;
+        }
+
+        return placeholder;
     }
 
     private long applyOperation(ArithmeticOp op, long left, long right) {
