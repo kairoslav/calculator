@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import ru.itmo.calculator.converter.GrpcInstructionConverter;
 import ru.itmo.calculator.dto.ArithmeticOp;
 import ru.itmo.calculator.dto.CalcInstruction;
 import ru.itmo.calculator.dto.Instruction;

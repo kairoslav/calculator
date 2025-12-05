@@ -1,4 +1,4 @@
-package ru.itmo.calculator.grpc;
+package ru.itmo.calculator.converter;
 
 import java.util.List;
 import java.util.Objects;

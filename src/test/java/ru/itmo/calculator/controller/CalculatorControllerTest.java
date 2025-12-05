@@ -22,6 +22,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import ru.itmo.calculator.config.JacksonConfig;
 import ru.itmo.calculator.converter.CalculatorApiConverter;
 import ru.itmo.calculator.dto.*;
+import ru.itmo.calculator.exception.GlobalExceptionHandler;
 import ru.itmo.calculator.execution.InstructionExecutionService;
 import ru.itmo.calculator.openapi.model.ExecuteProgramRequestDto;
 import ru.itmo.calculator.openapi.model.OperationDto;

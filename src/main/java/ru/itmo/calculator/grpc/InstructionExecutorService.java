@@ -4,6 +4,7 @@ import java.util.List;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import org.springframework.grpc.server.service.GrpcService;
+import ru.itmo.calculator.converter.GrpcInstructionConverter;
 import ru.itmo.calculator.dto.Instruction;
 import ru.itmo.calculator.dto.PrintResult;
 import ru.itmo.calculator.execution.InstructionExecutionService;

@@ -1,4 +1,4 @@
-package ru.itmo.calculator.controller;
+package ru.itmo.calculator.exception;
 
 import java.util.List;
 import org.slf4j.Logger;
@@ -8,7 +8,6 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.web.servlet.resource.NoResourceFoundException;
 import ru.itmo.calculator.openapi.model.ErrorResponseDto;
 
 @RestControllerAdvice
