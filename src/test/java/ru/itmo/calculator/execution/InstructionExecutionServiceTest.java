@@ -10,10 +10,14 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -263,6 +267,53 @@ class InstructionExecutionServiceTest {
         }
         assertTrue(executed.containsAll(Set.of("y2", "z2")));
         assertEquals(28, executed.size(), "All variables should be executed exactly once");
+    }
+
+    @Test
+    void executesManySharedBranchesConcurrently() {
+        int branchCount = 50;
+        ExecutorService delegate = Executors.newFixedThreadPool(8);
+        AtomicInteger inFlight = new AtomicInteger();
+        AtomicInteger peakConcurrency = new AtomicInteger();
+        Set<String> executed = Collections.newSetFromMap(new ConcurrentHashMap<>());
+        Executor trackingExecutor = command -> delegate.execute(
+                () -> {
+                    int current = inFlight.incrementAndGet();
+                    peakConcurrency.accumulateAndGet(current, Math::max);
+                    try {
+                        command.run();
+                    } finally {
+                        inFlight.decrementAndGet();
+                    }
+                }
+        );
+
+        InstructionExecutionService service =
+                new InstructionExecutionService(trackingExecutor, Duration.ofMillis(20), executed::add);
+
+        List<Instruction> program = new ArrayList<>();
+        List<PrintResult> expected = new ArrayList<>();
+        program.add(new CalcInstruction("base", ArithmeticOp.ADD, new LiteralOperand(1), new LiteralOperand(2)));
+
+        for (int i = 0; i < branchCount; i++) {
+            String var = "b" + i;
+            program.add(
+                    new CalcInstruction(
+                            var,
+                            ArithmeticOp.ADD,
+                            new VariableOperand("base"),
+                            new LiteralOperand(i + 2)));
+            program.add(new PrintInstruction(var));
+            expected.add(new PrintResult(var, i + 5));
+        }
+
+        List<PrintResult> result = service.execute(program);
+        delegate.shutdown();
+
+        assertEquals(expected, result);
+        assertEquals(branchCount + 1, executed.size(), "Each shared branch should execute once");
+        assertTrue(executed.contains("base"));
+        assertTrue(peakConcurrency.get() >= 4, "Independent branches should run concurrently");
     }
 
     private static void assertContains(String actual, String expected) {

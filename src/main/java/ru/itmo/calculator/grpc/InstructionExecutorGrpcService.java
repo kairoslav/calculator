@@ -13,12 +13,12 @@ import ru.itmo.calculator.generated.grpc.ExecuteProgramResponse;
 import ru.itmo.calculator.generated.grpc.InstructionExecutorGrpc;
 
 @GrpcService
-public class InstructionExecutorService extends InstructionExecutorGrpc.InstructionExecutorImplBase {
+public class InstructionExecutorGrpcService extends InstructionExecutorGrpc.InstructionExecutorImplBase {
 
     private final InstructionExecutionService executionService;
     private final GrpcInstructionConverter converter;
 
-    public InstructionExecutorService(
+    public InstructionExecutorGrpcService(
             InstructionExecutionService executionService, GrpcInstructionConverter converter) {
         this.executionService = executionService;
         this.converter = converter;

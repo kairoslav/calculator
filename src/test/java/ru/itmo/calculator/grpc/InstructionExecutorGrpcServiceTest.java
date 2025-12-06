@@ -29,15 +29,15 @@ import ru.itmo.calculator.generated.grpc.ExecuteProgramRequest;
 import ru.itmo.calculator.generated.grpc.ExecuteProgramResponse;
 import ru.itmo.calculator.generated.grpc.Operation;
 
-class InstructionExecutorServiceTest {
+class InstructionExecutorGrpcServiceTest {
 
     @Test
     void executesProgramUsingExecutionService() {
         InstructionExecutionService executionService = mock(InstructionExecutionService.class);
         when(executionService.execute(anyList())).thenReturn(List.of(new PrintResult("x", 3)));
 
-        InstructionExecutorService service =
-                new InstructionExecutorService(executionService, new GrpcInstructionConverter());
+        InstructionExecutorGrpcService service =
+                new InstructionExecutorGrpcService(executionService, new GrpcInstructionConverter());
         RecordingStreamObserver<ExecuteProgramResponse> observer = new RecordingStreamObserver<>();
 
         service.execute(buildRequest(), observer);
@@ -70,8 +70,8 @@ class InstructionExecutorServiceTest {
         InstructionExecutionService executionService = mock(InstructionExecutionService.class);
         when(executionService.execute(anyList())).thenThrow(new IllegalArgumentException("boom"));
 
-        InstructionExecutorService service =
-                new InstructionExecutorService(executionService, new GrpcInstructionConverter());
+        InstructionExecutorGrpcService service =
+                new InstructionExecutorGrpcService(executionService, new GrpcInstructionConverter());
         RecordingStreamObserver<ExecuteProgramResponse> observer = new RecordingStreamObserver<>();
 
         service.execute(buildRequest(), observer);
