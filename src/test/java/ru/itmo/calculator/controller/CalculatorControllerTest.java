@@ -3,7 +3,6 @@ package ru.itmo.calculator.controller;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -20,13 +19,13 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.beans.factory.annotation.Autowired;
 import ru.itmo.calculator.config.JacksonConfig;
-import ru.itmo.calculator.converter.CalculatorApiConverter;
-import ru.itmo.calculator.dto.*;
+import ru.itmo.calculator.dto.LiteralOperandValue;
 import ru.itmo.calculator.exception.GlobalExceptionHandler;
-import ru.itmo.calculator.execution.InstructionExecutionService;
+import ru.itmo.calculator.execution.InstructionExecutionFacade;
 import ru.itmo.calculator.openapi.model.ExecuteProgramRequestDto;
 import ru.itmo.calculator.openapi.model.OperationDto;
 import ru.itmo.calculator.openapi.model.PrintedValueDto;
+import ru.itmo.calculator.openapi.model.ExecuteProgramResponseDto;
 
 @WebMvcTest(controllers = CalculatorController.class)
 @Import({JacksonConfig.class, GlobalExceptionHandler.class})
@@ -36,10 +35,7 @@ class CalculatorControllerTest {
     private MockMvc mockMvc;
 
     @MockBean
-    private InstructionExecutionService executionService;
-
-    @MockBean
-    private CalculatorApiConverter converter;
+    private InstructionExecutionFacade executionFacade;
 
     @Test
     void executesProgramAndReturnsPrintedValues() throws Exception {
@@ -53,25 +49,18 @@ class CalculatorControllerTest {
                 }
                 """;
 
-        List<Instruction> domainInstructions =
-                List.of(
-                        new CalcInstruction("x", ArithmeticOp.ADD, new LiteralOperand(1), new LiteralOperand(2)),
-                        new PrintInstruction("x"));
-        List<PrintResult> executionResults = List.of(new PrintResult("x", 3));
-        List<PrintedValueDto> responseItems = List.of(new PrintedValueDto().var("x").value(3L));
-
-        when(converter.toDomainInstructions(any(ExecuteProgramRequestDto.class))).thenReturn(domainInstructions);
-        when(executionService.execute(domainInstructions)).thenReturn(executionResults);
-        when(converter.toPrintedValues(executionResults)).thenReturn(responseItems);
+        ExecuteProgramResponseDto response =
+                new ExecuteProgramResponseDto().items(List.of(new PrintedValueDto().var("x").value(3L)));
+        when(executionFacade.execute(org.mockito.ArgumentMatchers.any(ExecuteProgramRequestDto.class)))
+                .thenReturn(response);
 
         mockMvc.perform(post("/api/v1/executions").contentType(MediaType.APPLICATION_JSON).content(requestBody))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items[0].var").value("x"))
                 .andExpect(jsonPath("$.items[0].value").value(3));
 
-        ArgumentCaptor<ExecuteProgramRequestDto> requestCaptor =
-                ArgumentCaptor.forClass(ExecuteProgramRequestDto.class);
-        verify(converter).toDomainInstructions(requestCaptor.capture());
+        ArgumentCaptor<ExecuteProgramRequestDto> requestCaptor = ArgumentCaptor.forClass(ExecuteProgramRequestDto.class);
+        verify(executionFacade).execute(requestCaptor.capture());
         ExecuteProgramRequestDto parsedRequest = requestCaptor.getValue();
 
         assertEquals(2, parsedRequest.getInstructions().size());
@@ -106,7 +95,7 @@ class CalculatorControllerTest {
                 }
                 """;
 
-        when(converter.toDomainInstructions(any(ExecuteProgramRequestDto.class)))
+        when(executionFacade.execute(org.mockito.ArgumentMatchers.any(ExecuteProgramRequestDto.class)))
                 .thenThrow(new IllegalArgumentException("boom"));
 
         mockMvc.perform(post("/api/v1/executions").contentType(MediaType.APPLICATION_JSON).content(requestBody))

@@ -5,7 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -17,44 +17,31 @@ import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import ru.itmo.calculator.converter.GrpcInstructionConverter;
-import ru.itmo.calculator.dto.ArithmeticOp;
-import ru.itmo.calculator.dto.CalcInstruction;
-import ru.itmo.calculator.dto.Instruction;
-import ru.itmo.calculator.dto.LiteralOperand;
-import ru.itmo.calculator.dto.PrintInstruction;
-import ru.itmo.calculator.dto.PrintResult;
-import ru.itmo.calculator.execution.InstructionExecutionService;
+import ru.itmo.calculator.execution.InstructionExecutionFacade;
 import ru.itmo.calculator.generated.grpc.ExecuteProgramRequest;
 import ru.itmo.calculator.generated.grpc.ExecuteProgramResponse;
 import ru.itmo.calculator.generated.grpc.Operation;
+import ru.itmo.calculator.generated.grpc.PrintedValue;
 
 class InstructionExecutorGrpcServiceTest {
 
     @Test
-    void executesProgramUsingExecutionService() {
-        InstructionExecutionService executionService = mock(InstructionExecutionService.class);
-        when(executionService.execute(anyList())).thenReturn(List.of(new PrintResult("x", 3)));
+    void executesProgramUsingExecutionFacade() {
+        InstructionExecutionFacade executionFacade = mock(InstructionExecutionFacade.class);
+        ExecuteProgramResponse response =
+                ExecuteProgramResponse.newBuilder()
+                        .addItems(PrintedValue.newBuilder().setVar("x").setValue(3).build())
+                        .build();
+        when(executionFacade.execute(buildRequest())).thenReturn(response);
 
-        InstructionExecutorGrpcService service =
-                new InstructionExecutorGrpcService(executionService, new GrpcInstructionConverter());
+        InstructionExecutorGrpcService service = new InstructionExecutorGrpcService(executionFacade);
         RecordingStreamObserver<ExecuteProgramResponse> observer = new RecordingStreamObserver<>();
 
         service.execute(buildRequest(), observer);
 
-        ArgumentCaptor<List<Instruction>> captor = ArgumentCaptor.forClass(List.class);
-        verify(executionService).execute(captor.capture());
-        List<Instruction> domainInstructions = captor.getValue();
-        assertEquals(2, domainInstructions.size());
-
-        CalcInstruction calc = (CalcInstruction) domainInstructions.get(0);
-        assertEquals("x", calc.var());
-        assertEquals(ArithmeticOp.ADD, calc.op());
-        assertEquals(new LiteralOperand(1), calc.left());
-        assertEquals(new LiteralOperand(2), calc.right());
-
-        PrintInstruction print = (PrintInstruction) domainInstructions.get(1);
-        assertEquals("x", print.var());
+        ArgumentCaptor<ExecuteProgramRequest> captor = ArgumentCaptor.forClass(ExecuteProgramRequest.class);
+        verify(executionFacade).execute(captor.capture());
+        assertEquals(buildRequest(), captor.getValue());
 
         assertTrue(observer.completed);
         assertNull(observer.error);
@@ -67,11 +54,10 @@ class InstructionExecutorGrpcServiceTest {
 
     @Test
     void wrapsExecutionErrorsIntoInvalidArgumentStatus() {
-        InstructionExecutionService executionService = mock(InstructionExecutionService.class);
-        when(executionService.execute(anyList())).thenThrow(new IllegalArgumentException("boom"));
+        InstructionExecutionFacade executionFacade = mock(InstructionExecutionFacade.class);
+        doThrow(new IllegalArgumentException("boom")).when(executionFacade).execute(buildRequest());
 
-        InstructionExecutorGrpcService service =
-                new InstructionExecutorGrpcService(executionService, new GrpcInstructionConverter());
+        InstructionExecutorGrpcService service = new InstructionExecutorGrpcService(executionFacade);
         RecordingStreamObserver<ExecuteProgramResponse> observer = new RecordingStreamObserver<>();
 
         service.execute(buildRequest(), observer);

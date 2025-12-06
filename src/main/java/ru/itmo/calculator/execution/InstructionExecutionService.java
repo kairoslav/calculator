@@ -91,7 +91,9 @@ public class InstructionExecutionService {
     }
 
     private ExecutionPlan buildExecutionPlan(
-            List<PrintInstruction> printInstructions, Map<String, CalcInstruction> calculations) {
+            List<PrintInstruction> printInstructions,
+            Map<String, CalcInstruction> calculations
+    ) {
         Set<String> required = new LinkedHashSet<>();
         Map<String, List<String>> dependenciesByVar = new HashMap<>();
         Deque<String> stack = new ArrayDeque<>();

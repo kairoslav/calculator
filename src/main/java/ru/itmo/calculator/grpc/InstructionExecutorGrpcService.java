@@ -1,13 +1,9 @@
 package ru.itmo.calculator.grpc;
 
-import java.util.List;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import org.springframework.grpc.server.service.GrpcService;
-import ru.itmo.calculator.converter.GrpcInstructionConverter;
-import ru.itmo.calculator.dto.Instruction;
-import ru.itmo.calculator.dto.PrintResult;
-import ru.itmo.calculator.execution.InstructionExecutionService;
+import ru.itmo.calculator.execution.InstructionExecutionFacade;
 import ru.itmo.calculator.generated.grpc.ExecuteProgramRequest;
 import ru.itmo.calculator.generated.grpc.ExecuteProgramResponse;
 import ru.itmo.calculator.generated.grpc.InstructionExecutorGrpc;
@@ -15,21 +11,16 @@ import ru.itmo.calculator.generated.grpc.InstructionExecutorGrpc;
 @GrpcService
 public class InstructionExecutorGrpcService extends InstructionExecutorGrpc.InstructionExecutorImplBase {
 
-    private final InstructionExecutionService executionService;
-    private final GrpcInstructionConverter converter;
+    private final InstructionExecutionFacade executionFacade;
 
-    public InstructionExecutorGrpcService(
-            InstructionExecutionService executionService, GrpcInstructionConverter converter) {
-        this.executionService = executionService;
-        this.converter = converter;
+    public InstructionExecutorGrpcService(InstructionExecutionFacade executionFacade) {
+        this.executionFacade = executionFacade;
     }
 
     @Override
     public void execute(ExecuteProgramRequest request, StreamObserver<ExecuteProgramResponse> responseObserver) {
         try {
-            List<Instruction> instructions = converter.toDomainInstructions(request);
-            List<PrintResult> results = executionService.execute(instructions);
-            responseObserver.onNext(converter.toResponse(results));
+            responseObserver.onNext(executionFacade.execute(request));
             responseObserver.onCompleted();
         } catch (Exception e) {
             responseObserver.onError(
