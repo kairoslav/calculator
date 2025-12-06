@@ -36,42 +36,8 @@ docker compose up --build
 - `CalculatorController` — HTTP-адаптер;
 - `InstructionExecutorService` — gRPC-адаптер по proto `calculator.proto`.
 
-## InstructionExecutionService: схема выполнения
-```plantuml
-@startuml
-participant "Client" as Client
-participant "InstructionExecutionService" as Service
-participant "ExecutionPlan" as Plan
-participant "CompletableFuture\n(pool)" as Futures
-
-Client -> Service: execute(instructions)
-Service -> Service: разобрать calc/print,\nпроверить дубликаты и типы
-Service -> Plan: buildExecutionPlan(print, calculations)
-Plan --> Service: порядок вычислений + зависимости
-
-loop по executionOrder
-  Service -> Futures: startCalculations(var)\nresolveOperand(left/right)
-  alt operand = literal
-    Futures <-- Service: CompletableFuture.completedFuture(value)
-  else operand = variable
-    Futures <-- Service: взять future по имени или 400
-  end
-  par асинхронное вычисление
-    Futures -> Service: thenCombineAsync(left, right, executor)
-    Service -> Service: computeOperation(op, left, right)
-    alt короткое замыкание
-      Service -> Service: tryShortCircuit(op, left, right)
-    else обычное выполнение
-      Service -> Service: waitIfNeeded(50 ms)
-      Service -> Service: apply handler\noperationListener.accept(var)
-    end
-    Service --> Futures: future с результатом
-  end
-end
-
-Service -> Client: List<PrintResult> в порядке print
-@enduml
-```
+## Тестовое покрытие 72%
+![img.png](img.png)
 
 ## Поверхности API
 - HTTP: `POST /api/v1/executions` (`src/main/resources/openapi/calculator-openapi.yaml`).

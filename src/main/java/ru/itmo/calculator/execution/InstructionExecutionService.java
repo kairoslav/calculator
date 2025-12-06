@@ -18,39 +18,36 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.LongBinaryOperator;
+
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import ru.itmo.calculator.dto.ArithmeticOp;
-import ru.itmo.calculator.dto.CalcInstruction;
-import ru.itmo.calculator.dto.Instruction;
-import ru.itmo.calculator.dto.LiteralOperand;
-import ru.itmo.calculator.dto.Operand;
-import ru.itmo.calculator.dto.PrintInstruction;
-import ru.itmo.calculator.dto.PrintResult;
-import ru.itmo.calculator.dto.VariableOperand;
+import ru.itmo.calculator.dto.*;
 
 /**
  * Executes calculator instructions with dependency resolution and parallelism.
  */
+@Slf4j
 @Service
 public class InstructionExecutionService {
     private static final Map<ArithmeticOp, LongBinaryOperator> OPERATION_HANDLERS = Map.of(
             ArithmeticOp.ADD, (left, right) -> left + right,
             ArithmeticOp.SUBTRACT, (left, right) -> left - right,
             ArithmeticOp.MULTIPLY, (left, right) -> left * right);
-    private static final int MIN_PARALLELISM = 2;
 
     private final Executor executor;
     private final Duration operationDelay;
     private final Consumer<String> operationListener;
 
     public InstructionExecutionService() {
-        this(defaultExecutor(), Duration.ofMillis(50), var -> {});
+        this(defaultExecutor(), Duration.ofMillis(50), var -> {
+        });
     }
 
     public InstructionExecutionService(Executor executor, Duration operationDelay, Consumer<String> operationListener) {
         this.executor = Objects.requireNonNull(executor, "executor");
         this.operationDelay = Objects.requireNonNull(operationDelay, "operationDelay");
-        this.operationListener = operationListener == null ? var -> {} : operationListener;
+        this.operationListener = operationListener == null ? var -> {
+        } : operationListener;
     }
 
     public List<PrintResult> execute(List<Instruction> instructions) {
@@ -91,9 +88,7 @@ public class InstructionExecutionService {
     }
 
     private ExecutionPlan buildExecutionPlan(
-            List<PrintInstruction> printInstructions,
-            Map<String, CalcInstruction> calculations
-    ) {
+            List<PrintInstruction> printInstructions, Map<String, CalcInstruction> calculations) {
         Set<String> required = new LinkedHashSet<>();
         Map<String, List<String>> dependenciesByVar = new HashMap<>();
         Deque<String> stack = new ArrayDeque<>();
@@ -217,6 +212,12 @@ public class InstructionExecutionService {
         return OPERATION_HANDLERS.get(instruction.op()).applyAsLong(left, right);
     }
 
+    /**
+     * Returns a result of the operation if it can be calculated instantly.
+     * For ex: 0*x=0, 1*x=x, 0+x=x e.t.c.
+     *
+     * @return result of the operation
+     */
     private Long tryShortCircuit(ArithmeticOp op, long left, long right) {
         if (op == ArithmeticOp.MULTIPLY) {
             if (left == 0 || right == 0) {
@@ -256,17 +257,13 @@ public class InstructionExecutionService {
     }
 
     private static ExecutorService defaultExecutor() {
-        int parallelism = Math.max(MIN_PARALLELISM, Runtime.getRuntime().availableProcessors());
         AtomicInteger counter = new AtomicInteger();
-        return Executors.newFixedThreadPool(parallelism, runnable -> {
+        return Executors.newThreadPerTaskExecutor(runnable -> {
             Thread thread = new Thread(runnable);
             thread.setDaemon(true);
             thread.setName("calculator-exec-" + counter.incrementAndGet());
+            log.info("Created executor thread: {}", counter);
             return thread;
         });
-    }
-
-    private record ExecutionPlan(
-            Set<String> requiredVariables, Map<String, CalcInstruction> calculations, List<String> executionOrder) {
     }
 }

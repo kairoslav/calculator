@@ -13,8 +13,10 @@ import static org.mockito.Mockito.when;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
+
 import java.util.ArrayList;
 import java.util.List;
+
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import ru.itmo.calculator.execution.InstructionExecutionFacade;
@@ -28,11 +30,9 @@ class InstructionExecutorGrpcServiceTest {
     @Test
     void executesProgramUsingExecutionFacade() {
         InstructionExecutionFacade executionFacade = mock(InstructionExecutionFacade.class);
-        ExecuteProgramResponse response =
-                ExecuteProgramResponse.newBuilder()
-                        .addItems(PrintedValue.newBuilder().setVar("x").setValue(3).build())
-                        .build();
-        when(executionFacade.execute(buildRequest())).thenReturn(response);
+        when(executionFacade.execute(buildRequest())).thenReturn(ExecuteProgramResponse.newBuilder()
+                .addItems(PrintedValue.newBuilder().setVar("x").setValue(3).build())
+                .build());
 
         InstructionExecutorGrpcService service = new InstructionExecutorGrpcService(executionFacade);
         RecordingStreamObserver<ExecuteProgramResponse> observer = new RecordingStreamObserver<>();
